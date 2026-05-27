@@ -25,7 +25,7 @@ export default function Navbar() {
 
     if (!role) return (
         <nav style={styles.nav}>
-            <Link to="/" style={styles.logo}>👔 Men's Store</Link>
+            <Link to="/" style={styles.logo}> Men's Store</Link>
             <div style={styles.links}>
                 <Link to="/login"    style={styles.link}>Login</Link>
                 <Link to="/register" style={styles.link}>Register</Link>
@@ -35,7 +35,7 @@ export default function Navbar() {
 
     return (
         <nav style={styles.nav}>
-            <Link to="/" style={styles.logo}>👔 Men's Store</Link>
+            <Link to="/" style={styles.logo}> Men's Store</Link>
             <div style={styles.links}>
                 {/* Customer links */}
                 {['Customer','Sale','Admin'].includes(role) &&
@@ -56,6 +56,7 @@ export default function Navbar() {
                     <Link to="/admin/users" style={styles.link}>Users</Link>
                     <Link to="/admin/products" style={styles.link}>Products</Link>
                     <Link to="/admin/backup"   style={styles.link}> Backup</Link>
+                    <Link to="/admin/audit" style={styles.link}>Audit</Link>
                 </>}
 
                 <span style={styles.badge}>{role}</span>

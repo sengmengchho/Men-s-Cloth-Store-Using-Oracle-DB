@@ -14,6 +14,9 @@
 -- STEP 1: CREATE TABLES
 -- ============================================================
 
+-- Step 1: Switch container first
+ALTER SESSION SET CONTAINER = XEPDB1;
+
 -- 1. PRODUCTS
 CREATE TABLE products (
     product_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -88,14 +91,24 @@ CREATE TABLE sales_log (
 CREATE OR REPLACE VIEW v_sales_report AS
 SELECT
     o.order_id,
-    NVL(c.full_name, 'Unknown') AS customer_name,
-    u.username                  AS sold_by,
-    TO_CHAR(o.order_date, 'YYYY-MM-DD') AS order_date,
+    NVL(c.full_name, 'Unknown')        AS customer_name,
+    (SELECT uname
+     FROM (
+         SELECT u2.username AS uname
+         FROM sales_log sl
+         JOIN users u2 ON sl.user_id = u2.user_id
+         WHERE sl.order_id = o.order_id
+         AND u2.role IN ('Admin','Sale')
+         ORDER BY sl.log_id DESC
+     ) WHERE ROWNUM = 1)               AS sold_by,
+    TO_CHAR(o.order_date,'YYYY-MM-DD') AS order_date,
     o.status,
     o.total_amount
 FROM orders o
-LEFT JOIN customers c ON o.customer_id = c.customer_id
-LEFT JOIN users u     ON o.user_id     = u.user_id;
+LEFT JOIN customers c ON o.customer_id = c.customer_id;
+
+-- Verify
+SELECT * FROM v_sales_report ORDER BY order_id DESC;
 
 -- Verify it works
 SELECT * FROM v_sales_report;
@@ -662,8 +675,7 @@ SELECT SYS_CONTEXT('USERENV', 'CON_NAME') FROM dual;
 
 
 
--- Step 1: Switch container first
-ALTER SESSION SET CONTAINER = XEPDB1;
+
 
 -- Step 2: Check if ORDER_ITEMS exists
 SELECT table_name FROM user_tables WHERE table_name = 'ORDER_ITEMS';
@@ -698,4 +710,86 @@ FROM orders o
 JOIN customers c ON o.customer_id = c.customer_id
 JOIN users u     ON o.user_id     = u.user_id
 ORDER BY o.order_id DESC;
+
+SELECT * FROM v_sales_report ORDER BY order_id DESC;
+
+
+-- 1. Clean up duplicates and spam
+DELETE FROM sales_log 
+WHERE action IN ('AUTO_BACKUP_HOURLY','AUTO_BACKUP_DAILY');
+
+-- 2. Remove duplicate customer status logs (keep only Admin/Sale ones)
+DELETE FROM sales_log sl
+WHERE action LIKE 'STATUS_%'
+AND user_id IN (SELECT user_id FROM users WHERE role = 'Customer');
+
+COMMIT;
+
+-- 3. Fix the trigger to only log Admin/Sale users
+CREATE OR REPLACE TRIGGER trg_order_status_log
+AFTER UPDATE OF status ON orders
+FOR EACH ROW
+DECLARE
+    v_role VARCHAR2(20);
+BEGIN
+    IF :NEW.status != :OLD.status THEN
+        -- Only log if user is Admin or Sale (not Customer)
+        SELECT role INTO v_role 
+        FROM users WHERE user_id = :NEW.user_id;
+        
+        IF v_role IN ('Admin','Sale') THEN
+            INSERT INTO sales_log (order_id, user_id, action, log_date)
+            VALUES (:NEW.order_id, :NEW.user_id,
+                    'STATUS_' || :NEW.status, SYSDATE);
+        END IF;
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+-- 4. Disable the backup scheduler jobs
+BEGIN
+    DBMS_SCHEDULER.DISABLE('MENS_STORE_HOURLY_BACKUP');
+    DBMS_SCHEDULER.DISABLE('MENS_STORE_DAILY_BACKUP');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+COMMIT;
+
+
+-- Hour's user_id is 61, insert the completed log
+INSERT INTO sales_log (order_id, user_id, action, log_date)
+VALUES (34, 61, 'STATUS_COMPLETED', SYSDATE);
+COMMIT;
+
+-- Verify clean log
+SELECT sl.order_id, u.username, u.role, sl.action, sl.log_date
+FROM sales_log sl
+LEFT JOIN users u ON sl.user_id = u.user_id
+ORDER BY sl.log_date DESC;
+
+Select * from users;
+
+
+SELECT sl.log_id, sl.order_id, u.username, u.role, sl.action, sl.log_date
+FROM sales_log sl
+LEFT JOIN users u ON sl.user_id = u.user_id
+WHERE sl.order_id = 34
+ORDER BY sl.log_id;
+
+
+SELECT user_id, username, role FROM users ORDER BY user_id;
+
+
+-- Verify
+SELECT sl.log_id, u.username, u.role, sl.action
+FROM sales_log sl JOIN users u ON sl.user_id = u.user_id
+WHERE sl.order_id = 34;
+
+
+
+
+
+
 

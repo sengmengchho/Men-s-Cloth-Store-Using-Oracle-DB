@@ -176,12 +176,18 @@ def get_customer_orders(customer_id):
     cursor.execute(
         "SELECT o.order_id, "
         "NVL(c.full_name,'Unknown') AS customer_name, "
-        "u.username AS sold_by, "
         "TO_CHAR(o.order_date,'YYYY-MM-DD') AS order_date, "
-        "o.status, o.total_amount "
+        "o.status, o.total_amount, "
+        "(SELECT sub.uname FROM "
+        "  (SELECT u2.username AS uname "
+        "   FROM sales_log sl "
+        "   JOIN users u2 ON sl.user_id = u2.user_id "
+        "   WHERE sl.order_id = o.order_id "
+        "   AND u2.role IN ('Admin','Sale') "
+        "   ORDER BY sl.log_date DESC) sub "
+        " WHERE ROWNUM = 1) AS processed_by "
         "FROM orders o "
         "LEFT JOIN customers c ON o.customer_id = c.customer_id "
-        "LEFT JOIN users u     ON o.user_id     = u.user_id "
         "WHERE o.customer_id = :1 "
         "ORDER BY o.order_id DESC",
         [int(customer_id)]
@@ -330,3 +336,151 @@ def get_sales_log():
     rows = fetchall_as_dict(cursor)
     cursor.close(); conn.close()
     return rows
+
+
+# ── Audit ─────────────────────────────────────────────────────────────────────
+
+def get_audit_report():
+    """Full audit: every order with staff, customer, and items detail."""
+    conn   = get_connection()
+    cursor = conn.cursor()
+
+    # Orders with staff and customer info
+    # staff_name = last Admin/Sale who processed status (from sales_log)
+    cursor.execute("""
+        SELECT
+            o.order_id,
+            (SELECT uname FROM (
+                SELECT u2.username AS uname
+                FROM sales_log sl
+                JOIN users u2 ON sl.user_id = u2.user_id
+                WHERE sl.order_id = o.order_id
+                AND u2.role IN ('Admin','Sale')
+                ORDER BY sl.log_id DESC
+            ) WHERE ROWNUM = 1)   AS staff_name,
+            'Staff'               AS staff_role,
+            c.full_name           AS customer_name,
+            c.phone               AS customer_phone,
+            TO_CHAR(o.order_date,'YYYY-MM-DD HH24:MI') AS order_date,
+            o.status,
+            NVL(o.total_amount,0) AS total_amount
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.customer_id
+        ORDER BY o.order_id DESC
+    """)
+    orders = fetchall_as_dict(cursor)
+
+    # Order items for each order
+    cursor.execute("""
+        SELECT
+            oi.order_id,
+            p.product_name,
+            p.category,
+            NVL(oi.selected_size,  '—') AS selected_size,
+            NVL(oi.selected_color, '—') AS selected_color,
+            oi.quantity,
+            oi.unit_price,
+            (oi.quantity * oi.unit_price) AS subtotal
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.product_id
+        ORDER BY oi.order_id DESC, oi.item_id
+    """)
+    items = fetchall_as_dict(cursor)
+
+    # Status change log
+    cursor.execute("""
+        SELECT
+            sl.order_id,
+            u.username  AS changed_by,
+            sl.action,
+            TO_CHAR(sl.log_date,'YYYY-MM-DD HH24:MI') AS log_date
+        FROM sales_log sl
+        LEFT JOIN users u ON sl.user_id = u.user_id
+        ORDER BY sl.log_date DESC
+    """)
+    logs = fetchall_as_dict(cursor)
+
+    cursor.close(); conn.close()
+
+    # Group items and logs by order_id
+    items_map = {}
+    for item in items:
+        oid = item['ORDER_ID']
+        if oid not in items_map:
+            items_map[oid] = []
+        items_map[oid].append(item)
+
+    logs_map = {}
+    for log in logs:
+        oid = log['ORDER_ID']
+        if oid not in logs_map:
+            logs_map[oid] = []
+        logs_map[oid].append(log)
+
+    for order in orders:
+        oid = order['ORDER_ID']
+        order['items'] = items_map.get(oid, [])
+        order['logs']  = logs_map.get(oid, [])
+
+    return orders
+
+
+def get_staff_performance():
+    """Summary: orders and revenue per staff member."""
+    conn   = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            u.username,
+            u.role,
+            COUNT(o.order_id)                           AS total_orders,
+            SUM(CASE WHEN o.status != 'Cancelled'
+                     THEN NVL(o.total_amount,0) ELSE 0 END) AS total_revenue,
+            SUM(CASE WHEN o.status = 'Completed'
+                     THEN 1 ELSE 0 END)                 AS completed_orders,
+            SUM(CASE WHEN o.status = 'Cancelled'
+                     THEN 1 ELSE 0 END)                 AS cancelled_orders,
+            TO_CHAR(MAX(o.order_date),'YYYY-MM-DD')     AS last_order_date
+        FROM orders o
+        JOIN users u ON o.user_id = u.user_id
+        GROUP BY u.username, u.role
+        ORDER BY total_revenue DESC
+    """)
+    rows = fetchall_as_dict(cursor)
+    cursor.close(); conn.close()
+    return rows
+
+
+def create_user(username, password, full_name, email, phone, address, role):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    user_id_var = cursor.var(oracledb.NUMBER)
+    cursor.execute(
+        "INSERT INTO users (username, password, role) "
+        "VALUES (:1, :2, :3) RETURNING user_id INTO :4",
+        [username, password, role, user_id_var]
+    )
+    user_id = int(user_id_var.getvalue()[0])
+    cursor.execute(
+        "INSERT INTO customers (user_id, full_name, email, phone, address) "
+        "VALUES (:1, :2, :3, :4, :5)",
+        [user_id, full_name, email or '', phone or '', address or '']
+    )
+    conn.commit()
+    cursor.close(); conn.close()
+    return user_id
+
+
+def log_status_change(order_id, user_id, status):
+    conn   = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO sales_log (order_id, user_id, action, log_date) "
+            "VALUES (:1, :2, :3, SYSDATE)",
+            [int(order_id), int(user_id), f'STATUS_{status.upper()}']
+        )
+        conn.commit()
+    except Exception as e:
+        print("log error:", str(e))
+    cursor.close(); conn.close()
