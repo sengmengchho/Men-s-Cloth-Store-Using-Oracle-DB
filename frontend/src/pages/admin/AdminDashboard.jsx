@@ -78,7 +78,10 @@ export default function AdminDashboard() {
                 + New Order
             </button>
             <button style={s.navbtn} onClick={() => navigate('/admin/backup')}>
-                 Backup DB
+                Backup DB
+            </button>
+            <button style={s.navbtn} onClick={() => navigate('/admin/audit')}>
+                Audit Report
             </button>
 
             {/* Stats */}
