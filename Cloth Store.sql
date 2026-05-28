@@ -20,7 +20,7 @@ ALTER SESSION SET CONTAINER = XEPDB1;
 -- 1. PRODUCTS
 CREATE TABLE products (
     product_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    product_name VARCHAR2(100)  NOT NULL,
+    p_name VARCHAR2(100)  NOT NULL,
     category     VARCHAR2(50),
     size_        VARCHAR2(10),
     color        VARCHAR2(30),
