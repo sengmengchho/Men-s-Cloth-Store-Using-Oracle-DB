@@ -81,10 +81,10 @@ export default function Register() {
                     {/* Benefits */}
                     <div style={{ display:'flex', flexDirection:'column', gap:14, marginTop:36 }}>
                         {[
-                            ['🛒', 'Easy cart & checkout'],
-                            ['📦', 'Track your orders'],
-                            ['🔒', 'Secure & private'],
-                            ['💳', 'Multiple payment options'],
+                            ['', 'Easy cart & checkout'],
+                            ['', 'Track your orders'],
+                            ['', 'Secure & private'],
+                            ['', 'Multiple payment options'],
                         ].map(([icon, text]) => (
                             <div key={text} style={{ display:'flex', alignItems:'center', gap:14 }}>
                                 <div style={{ width:38, height:38,
