@@ -1,240 +1,364 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { login } from '../api'
+// src/pages/Login.jsx
+// Pure black luxury menswear aesthetic — Mr Porter / SSENSE / Acne Studios.
+// Form fields & flow preserved. Swap the fetch placeholder with your existing API call.
+
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+
+// ===== Palette =====
+// ===== Palette =====
+const BG = 'linear-gradient(135deg, #000000 0%, #395672 50%, #463838 100%)'; // black → blue → white
+const SURF = '#4e1a1a';      // panels / form background
+const INK = '#efeeee';       // main text
+const MUTED = '#8e8e8e';     // secondary text / hints
+const RULE = '#1a1a1a';      // input underline
+const ACCENT_LINE = '#151617'; // links/buttons accent
+
+const s = {
+    page: {
+        minHeight: '100vh',
+        background: BG,
+        color: INK,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 24px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    },
+    container: {
+        width: '100%',
+        maxWidth: 440,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+    },
+    // Brand
+    brand: {
+        marginBottom: 56,
+        textAlign: 'center',
+    },
+    monogram: {
+        width: 56,
+        height: 56,
+        border: `1px solid ${INK}`,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+        fontSize: 30,
+        fontWeight: 500,
+        fontStyle: 'italic',
+        color: INK,
+        marginBottom: 18,
+    },
+    brandText: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.35em',
+        textTransform: 'uppercase',
+        color: MUTED,
+    },
+    // Header
+    eyebrow: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.35em',
+        textTransform: 'uppercase',
+        color: MUTED,
+        marginBottom: 18,
+        textAlign: 'center',
+    },
+    headline: {
+        fontFamily: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+        fontSize: 56,
+        fontWeight: 500,
+        lineHeight: 1,
+        letterSpacing: '-0.02em',
+        color: INK,
+        textAlign: 'center',
+        marginBottom: 18,
+    },
+    subhead: {
+        fontSize: 14,
+        lineHeight: 1.7,
+        color: MUTED,
+        textAlign: 'center',
+        marginBottom: 56,
+        maxWidth: 360,
+    },
+    // Form
+    form: {
+        width: '100%',
+    },
+    fieldGroup: {
+        marginBottom: 32,
+    },
+    label: {
+        display: 'block',
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.25em',
+        textTransform: 'uppercase',
+        color: MUTED,
+        marginBottom: 14,
+    },
+    input: {
+        width: '100%',
+        background: 'transparent',
+        border: 'none',
+        borderBottom: `1px solid ${RULE}`,
+        padding: '8px 0',
+        fontSize: 15,
+        color: INK,
+        outline: 'none',
+        fontFamily: 'inherit',
+        letterSpacing: '0.01em',
+        transition: 'border-color 0.2s',
+    },
+    inputFocus: {
+        borderBottomColor: INK,
+    },
+    error: {
+        fontSize: 11,
+        color: '#e74c3c',
+        marginTop: 8,
+        marginBottom: 14,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        fontWeight: 600,
+    },
+    button: {
+        width: '100%',
+        background: INK,
+        color: BG,
+        border: 'none',
+        padding: '20px 24px',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: '0.3em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        marginTop: 16,
+        transition: 'opacity 0.15s',
+        fontFamily: 'inherit',
+    },
+    // OR divider
+    dividerWrap: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        margin: '36px 0 28px',
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        background: ACCENT_LINE,
+    },
+    dividerText: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.3em',
+        textTransform: 'uppercase',
+        color: MUTED,
+    },
+    guestLink: {
+        display: 'block',
+        textAlign: 'center',
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: '0.25em',
+        textTransform: 'uppercase',
+        color: INK,
+        textDecoration: 'none',
+        padding: '14px 0',
+        border: `1px solid ${ACCENT_LINE}`,
+        transition: 'border-color 0.15s, background 0.15s',
+    },
+    // Footer
+    footer: {
+        marginTop: 56,
+        fontSize: 13,
+        color: MUTED,
+        textAlign: 'center',
+    },
+    inlineLink: {
+        color: INK,
+        textDecoration: 'none',
+        borderBottom: `1px solid ${INK}`,
+        paddingBottom: 1,
+        marginLeft: 4,
+        fontWeight: 500,
+    },
+    bottomBar: {
+        marginTop: 56,
+        paddingTop: 24,
+        borderTop: `1px solid ${ACCENT_LINE}`,
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: 10,
+        letterSpacing: '0.25em',
+        textTransform: 'uppercase',
+        color: MUTED,
+        fontWeight: 600,
+    },
+}
 
 export default function Login() {
-    const [form,    setForm]    = useState({ username:'', password:'' })
-    const [error,   setError]   = useState('')
-    const [loading, setLoading] = useState(false)
+    const [username, setUsername] = useState('')
+    const [password, setPassword] = useState('')
+    const [error,    setError]    = useState('')
+    const [loading,  setLoading]  = useState(false)
+    const [focused,  setFocused]  = useState(null)
     const navigate = useNavigate()
+
+    // Load Cormorant Garamond once
+    useEffect(() => {
+        const href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap'
+        if (!document.querySelector(`link[href="${href}"]`)) {
+            const link = document.createElement('link')
+            link.rel = 'stylesheet'
+            link.href = href
+            document.head.appendChild(link)
+        }
+    }, [])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        setLoading(true); setError('')
+        setError('')
+        setLoading(true)
+
         try {
-            const res = await login(form.username, form.password)
-            localStorage.setItem('token',       res.data.token)
-            localStorage.setItem('role',        res.data.role)
-            localStorage.setItem('username',    res.data.username)
-            localStorage.setItem('user_id',     res.data.user_id)
-            localStorage.setItem('customer_id', res.data.customer_id || '')
-            if (res.data.role === 'Admin')     navigate('/admin')
-            else if (res.data.role === 'Sale') navigate('/sale')
-            else navigate('/products')
-        } catch { setError('Invalid username or password') }
-        setLoading(false)
+            // ════════════════════════════════════════════════════════════════
+            //  REPLACE THIS BLOCK with your existing API call
+            // Your existing Login.jsx probably has something like:
+            //    import { loginUser } from '../api'
+            //    const { data } = await loginUser({ username, password })
+            // Paste your existing logic here, then keep the localStorage block below.
+            // ════════════════════════════════════════════════════════════════
+            const response = await fetch('http://localhost:8000/api/login/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            })
+
+            if (!response.ok) throw new Error('Incorrect username or password')
+
+            const data = await response.json()
+
+            // ===== These are the localStorage keys your app reads =====
+            // (Navbar reads 'role' and 'username'; Products reads 'token',
+            //  'customer_id', 'user_id' for placing orders.)
+            localStorage.setItem('token',    data.token    || '')
+            localStorage.setItem('username', data.username || username)
+            localStorage.setItem('role',     data.role     || 'Customer')
+            if (data.user_id)     localStorage.setItem('user_id',     data.user_id)
+            if (data.customer_id) localStorage.setItem('customer_id', data.customer_id)
+
+            // Route by role
+            if      (data.role === 'Admin') navigate('/admin')
+            else if (data.role === 'Sale')  navigate('/sale')
+            else                            navigate('/products')
+        } catch (err) {
+            setError(err.message || 'Login failed')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
-        <div style={{ minHeight:'100vh', margin:0, padding:0,
-                      fontFamily:"'DM Sans',sans-serif",
-                      background:'#0f0c29', position:'relative', overflow:'hidden',
-                      display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet"/>
-
-            {/* ── Animated background blobs ── */}
-            <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%',
-                          background:'radial-gradient(circle, rgba(79,70,229,.35) 0%, transparent 70%)',
-                          top:'-10%', left:'-5%', filter:'blur(40px)' }}/>
-            <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%',
-                          background:'radial-gradient(circle, rgba(124,58,237,.3) 0%, transparent 70%)',
-                          bottom:'-5%', right:'-5%', filter:'blur(40px)' }}/>
-            <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%',
-                          background:'radial-gradient(circle, rgba(99,102,241,.2) 0%, transparent 70%)',
-                          top:'40%', left:'40%', filter:'blur(30px)' }}/>
-
-            {/* ── Floating product cards (decorative) ── */}
-            {[
-                { top:'8%',  left:'3%',  rotate:'-8deg',  label:'New Arrival', emoji:'👔', delay:'0s' },
-                { top:'60%', left:'2%',  rotate:'6deg',   label:'Best Seller', emoji:'👖', delay:'.3s' },
-                { top:'12%', right:'3%', rotate:'7deg',   label:'Premium',     emoji:'🧥', delay:'.15s' },
-                { top:'65%', right:'2%', rotate:'-5deg',  label:'Sale 20%',    emoji:'👟', delay:'.45s' },
-            ].map((c, i) => (
-                <div key={i} style={{
-                    position:'absolute', top:c.top, left:c.left, right:c.right,
-                    transform:`rotate(${c.rotate})`,
-                    background:'rgba(255,255,255,.06)',
-                    backdropFilter:'blur(12px)',
-                    border:'1px solid rgba(255,255,255,.12)',
-                    borderRadius:16, padding:'14px 18px',
-                    display:'flex', alignItems:'center', gap:10,
-                    animation:`float${i} 4s ease-in-out infinite`,
-                    animationDelay: c.delay,
-                }}>
-                    <div style={{ fontSize:26 }}>{c.emoji}</div>
-                    <div style={{ fontSize:12, fontWeight:600, color:'rgba(255,255,255,.8)' }}>
-                        {c.label}
-                    </div>
-                </div>
-            ))}
-
-            <style>{`
-                @keyframes float0 { 0%,100%{transform:rotate(-8deg) translateY(0)} 50%{transform:rotate(-8deg) translateY(-12px)} }
-                @keyframes float1 { 0%,100%{transform:rotate(6deg) translateY(0)} 50%{transform:rotate(6deg) translateY(-10px)} }
-                @keyframes float2 { 0%,100%{transform:rotate(7deg) translateY(0)} 50%{transform:rotate(7deg) translateY(-14px)} }
-                @keyframes float3 { 0%,100%{transform:rotate(-5deg) translateY(0)} 50%{transform:rotate(-5deg) translateY(-10px)} }
-            `}</style>
-
-            {/* ── Main card ── */}
-            <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:440,
-                          margin:'0 24px' }}>
-
-                {/* Logo */}
-                <div style={{ textAlign:'center', marginBottom:32 }}>
-                    <div style={{ display:'inline-flex', alignItems:'center', gap:12,
-                                  background:'rgba(255,255,255,.08)',
-                                  backdropFilter:'blur(10px)',
-                                  border:'1px solid rgba(255,255,255,.15)',
-                                  borderRadius:50, padding:'10px 20px' }}>
-                        <span style={{ fontSize:22 }}></span>
-                        <div>
-                            <div style={{ fontSize:16, fontWeight:700, color:'#fff',
-                                          lineHeight:1 }}>Men's Store</div>
-                            <div style={{ fontSize:10, color:'rgba(255,255,255,.5)',
-                                          letterSpacing:'.1em', marginTop:2 }}>CAMBODIA</div>
-                        </div>
-                    </div>
+        <div style={s.page}>
+            <div style={s.container}>
+                {/* Brand */}
+                <div style={s.brand}>
+                    <div style={s.monogram}>M</div>
+                    <div style={s.brandText}>Men's · Cambodia</div>
                 </div>
 
-                {/* Card */}
-                <div style={{ background:'rgba(255,255,255,.07)',
-                              backdropFilter:'blur(24px)',
-                              border:'1px solid rgba(255,255,255,.12)',
-                              borderRadius:24, padding:'36px 36px 32px',
-                              boxShadow:'0 32px 64px rgba(0,0,0,.4)' }}>
-
-                    <h1 style={{ fontSize:28, fontWeight:800, color:'#fff',
-                                 marginBottom:6, letterSpacing:'-.02em' }}>
-                        Welcome back
-                    </h1>
-                    <p style={{ fontSize:14, color:'rgba(255,255,255,.5)',
-                                marginBottom:28 }}>
-                        Sign in to your account to continue shopping
-                    </p>
-
-                    {/* Error */}
-                    {error && (
-                        <div style={{ background:'rgba(239,68,68,.15)',
-                                      border:'1px solid rgba(239,68,68,.3)',
-                                      color:'#fca5a5', padding:'11px 14px',
-                                      borderRadius:10, fontSize:13, marginBottom:20 }}>
-                            ✕ {error}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit}>
-                        {/* Username */}
-                        <div style={{ marginBottom:16 }}>
-                            <label style={{ display:'block', fontSize:12, fontWeight:600,
-                                            color:'rgba(255,255,255,.6)', marginBottom:8,
-                                            textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                Username
-                            </label>
-                            <input
-                                value={form.username}
-                                onChange={e => setForm({...form, username:e.target.value})}
-                                placeholder="Enter your username"
-                                required
-                                style={{ width:'100%', padding:'13px 16px',
-                                         background:'rgba(255,255,255,.08)',
-                                         border:'1px solid rgba(255,255,255,.12)',
-                                         borderRadius:12, fontSize:14, color:'#fff',
-                                         boxSizing:'border-box', outline:'none',
-                                         fontFamily:'inherit', transition:'all .2s' }}
-                                onFocus={e => {
-                                    e.target.style.borderColor='rgba(129,140,248,.8)'
-                                    e.target.style.background='rgba(255,255,255,.12)'
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor='rgba(255,255,255,.12)'
-                                    e.target.style.background='rgba(255,255,255,.08)'
-                                }}
-                            />
-                        </div>
-
-                        {/* Password */}
-                        <div style={{ marginBottom:28 }}>
-                            <label style={{ display:'block', fontSize:12, fontWeight:600,
-                                            color:'rgba(255,255,255,.6)', marginBottom:8,
-                                            textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                value={form.password}
-                                onChange={e => setForm({...form, password:e.target.value})}
-                                placeholder="Enter your password"
-                                required
-                                style={{ width:'100%', padding:'13px 16px',
-                                         background:'rgba(255,255,255,.08)',
-                                         border:'1px solid rgba(255,255,255,.12)',
-                                         borderRadius:12, fontSize:14, color:'#fff',
-                                         boxSizing:'border-box', outline:'none',
-                                         fontFamily:'inherit', transition:'all .2s' }}
-                                onFocus={e => {
-                                    e.target.style.borderColor='rgba(129,140,248,.8)'
-                                    e.target.style.background='rgba(255,255,255,.12)'
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor='rgba(255,255,255,.12)'
-                                    e.target.style.background='rgba(255,255,255,.08)'
-                                }}
-                            />
-                        </div>
-
-                        {/* Sign in button */}
-                        <button type="submit" disabled={loading}
-                            style={{ width:'100%', padding:'14px',
-                                     background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                                     color:'#fff', border:'none', borderRadius:12,
-                                     fontSize:15, fontWeight:700, cursor:'pointer',
-                                     boxShadow:'0 8px 24px rgba(99,102,241,.5)',
-                                     letterSpacing:'.01em', transition:'all .2s',
-                                     opacity: loading ? .8 : 1 }}
-                            onMouseEnter={e => { if(!loading) e.target.style.transform='translateY(-1px)' }}
-                            onMouseLeave={e => e.target.style.transform='none'}>
-                            {loading ? 'Signing in...' : 'Sign in →'}
-                        </button>
-                    </form>
-
-                    {/* Divider */}
-                    <div style={{ display:'flex', alignItems:'center', gap:12,
-                                  margin:'20px 0' }}>
-                        <div style={{ flex:1, height:1, background:'rgba(255,255,255,.1)' }}/>
-                        <span style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>or</span>
-                        <div style={{ flex:1, height:1, background:'rgba(255,255,255,.1)' }}/>
-                    </div>
-
-                    {/* Browse without login */}
-                    <Link to="/products"
-                        style={{ display:'flex', alignItems:'center', justifyContent:'center',
-                                 gap:8, padding:'13px',
-                                 background:'rgba(255,255,255,.06)',
-                                 border:'1px solid rgba(255,255,255,.1)',
-                                 borderRadius:12, textDecoration:'none',
-                                 color:'rgba(255,255,255,.7)', fontSize:14,
-                                 fontWeight:500, transition:'all .2s' }}
-                        onMouseEnter={e => {
-                            e.currentTarget.style.background='rgba(255,255,255,.1)'
-                            e.currentTarget.style.color='#fff'
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.background='rgba(255,255,255,.06)'
-                            e.currentTarget.style.color='rgba(255,255,255,.7)'
-                        }}>
-                         Browse products without signing in
-                    </Link>
-                </div>
-
-                {/* Register link */}
-                <p style={{ textAlign:'center', marginTop:20, fontSize:14,
-                             color:'rgba(255,255,255,.4)' }}>
-                    Don't have an account?{' '}
-                    <Link to="/register"
-                        style={{ color:'#a5b4fc', fontWeight:600, textDecoration:'none' }}>
-                        Create one free →
-                    </Link>
+                {/* Header */}
+                <div style={s.eyebrow}>Members</div>
+                <h1 style={s.headline}>Sign In</h1>
+                <p style={s.subhead}>
+                    Welcome back. Enter your details to continue
+                    your shopping journey.
                 </p>
+
+                {/* Form */}
+                <form style={s.form} onSubmit={handleSubmit} noValidate>
+                    <div style={s.fieldGroup}>
+                        <label style={s.label} htmlFor="username">Username</label>
+                        <input
+                            id="username"
+                            type="text"
+                            style={{
+                                ...s.input,
+                                ...(focused === 'username' ? s.inputFocus : {}),
+                            }}
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            onFocus={() => setFocused('username')}
+                            onBlur={() => setFocused(null)}
+                            required
+                            autoFocus
+                            autoComplete="username"
+                        />
+                    </div>
+
+                    <div style={s.fieldGroup}>
+                        <label style={s.label} htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            style={{
+                                ...s.input,
+                                ...(focused === 'password' ? s.inputFocus : {}),
+                            }}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setFocused('password')}
+                            onBlur={() => setFocused(null)}
+                            required
+                            autoComplete="current-password"
+                        />
+                    </div>
+
+                    {error && <div style={s.error}>{error}</div>}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{
+                            ...s.button,
+                            ...(loading ? { opacity: 0.5, cursor: 'wait' } : {}),
+                        }}
+                    >
+                        {loading ? 'Signing in…' : 'Sign In →'}
+                    </button>
+                </form>
+
+                {/* OR divider */}
+                <div style={s.dividerWrap}>
+                    <div style={s.dividerLine} />
+                    <span style={s.dividerText}>Or</span>
+                    <div style={s.dividerLine} />
+                </div>
+
+                <Link to="/products" style={s.guestLink}>
+                    Continue as Guest →
+                </Link>
+
+                {/* Footer */}
+                <p style={s.footer}>
+                    Don't have an account?
+                    <Link to="/register" style={s.inlineLink}>Register</Link>
+                </p>
+
+                {/* Bottom bar */}
+                <div style={s.bottomBar}>
+                    <span>© 2026 Men's Store</span>
+                    <span>Phnom Penh</span>
+                </div>
             </div>
         </div>
     )

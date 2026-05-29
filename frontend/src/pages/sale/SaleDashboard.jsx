@@ -11,11 +11,11 @@ const STATUS_FLOW = {
 }
 
 const STATUS_STYLE = {
-    Pending:   { bg:'#fffbeb', color:'#b45309', border:'#fde68a', icon:'⏳' },
-    Confirmed: { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe', icon:'✅' },
-    Shipped:   { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0', icon:'🚚' },
-    Completed: { bg:'#f0fdf4', color:'#166534', border:'#86efac', icon:'🎉' },
-    Cancelled: { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca', icon:'❌' },
+    Pending:   { bg:'#fffbeb', color:'#b45309', border:'#fde68a', icon:'' },
+    Confirmed: { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe', icon:'' },
+    Shipped:   { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0', icon:'' },
+    Completed: { bg:'#f0fdf4', color:'#166534', border:'#86efac', icon:'' },
+    Cancelled: { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca', icon:'' },
 }
 
 const imgSrc = (url) => {
@@ -101,7 +101,7 @@ function OrderItemsModal({ order, onClose }) {
                                                            style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                                                     : <div style={{ width:'100%', height:'100%', display:'flex',
                                                                     alignItems:'center', justifyContent:'center',
-                                                                    fontSize:20 }}>👔</div>}
+                                                                    fontSize:20 }}></div>}
                                             </div>
                                             <div>
                                                 <div style={{ fontSize:14, fontWeight:600, color:'#0f172a' }}>
@@ -308,7 +308,7 @@ export default function SaleDashboard() {
                 <span style={{ fontSize:16, color:'#cbd5e1', margin:'0 6px' }}>|</span>
                 <span style={{ fontSize:12, fontWeight:600, color:'#b91c1c', padding:'4px 12px',
                                background:'#fef2f2', borderRadius:20, border:'1px solid #fecaca',
-                               whiteSpace:'nowrap' }}>❌ Cancelled (any stage)</span>
+                               whiteSpace:'nowrap' }}> Cancelled (any stage)</span>
             </div>
 
             {/* Filter tabs */}
@@ -344,7 +344,7 @@ export default function SaleDashboard() {
             ) : filtered.length === 0 ? (
                 <div style={{ textAlign:'center', padding:60, color:'#94a3b8', background:'#fff',
                               borderRadius:14, border:'1px solid #e2e8f0' }}>
-                    <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+                    <div style={{ fontSize:40, marginBottom:12 }}></div>
                     <div style={{ fontSize:15, fontWeight:500 }}>No {filter} orders</div>
                 </div>
             ) : (

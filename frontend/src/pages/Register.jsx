@@ -1,290 +1,457 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { register } from '../api'
+// src/pages/Register.jsx
+// Pure black luxury menswear aesthetic — matches Login.jsx.
+// All form fields preserved (username, password, full name, email, phone, address).
+// Swap the fetch placeholder with your existing API call.
+
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+
+// ===== Palette (same as Login) =====
+
+const BG = 'linear-gradient(135deg, #000000 0%, #395672 50%, #463838 100%)'; // black → blue → white
+const SURF = '#4e1a1a';      // panels / form background
+const INK = '#efeeee';       // main text
+const MUTED = '#8e8e8e';     // secondary text / hints
+const RULE = '#1a1a1a';      // input underline
+const ACCENT_LINE = '#151617'; // links/buttons accent
+
+
+const s = {
+    page: {
+        minHeight: '100vh',
+        background: BG,
+        color: INK,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        padding: '60px 24px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    },
+    container: {
+        width: '100%',
+        maxWidth: 520,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+    },
+    brand: {
+        marginBottom: 48,
+        textAlign: 'center',
+    },
+    monogram: {
+        width: 56,
+        height: 56,
+        border: `1px solid ${INK}`,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+        fontSize: 30,
+        fontWeight: 500,
+        fontStyle: 'italic',
+        color: INK,
+        marginBottom: 18,
+    },
+    brandText: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.35em',
+        textTransform: 'uppercase',
+        color: MUTED,
+    },
+    eyebrow: {
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.35em',
+        textTransform: 'uppercase',
+        color: MUTED,
+        marginBottom: 18,
+        textAlign: 'center',
+    },
+    headline: {
+        fontFamily: '"Cormorant Garamond", Georgia, "Times New Roman", serif',
+        fontSize: 52,
+        fontWeight: 500,
+        lineHeight: 1,
+        letterSpacing: '-0.02em',
+        color: INK,
+        textAlign: 'center',
+        marginBottom: 18,
+    },
+    subhead: {
+        fontSize: 14,
+        lineHeight: 1.7,
+        color: MUTED,
+        textAlign: 'center',
+        marginBottom: 48,
+        maxWidth: 380,
+    },
+    form: {
+        width: '100%',
+    },
+    fieldRow: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 28,
+        marginBottom: 28,
+    },
+    fieldGroup: {
+        marginBottom: 28,
+    },
+    label: {
+        display: 'block',
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.25em',
+        textTransform: 'uppercase',
+        color: MUTED,
+        marginBottom: 12,
+    },
+    required: {
+        color: '#e74c3c',
+        marginLeft: 4,
+    },
+    input: {
+        width: '100%',
+        background: 'transparent',
+        border: 'none',
+        borderBottom: `1px solid ${RULE}`,
+        padding: '8px 0',
+        fontSize: 15,
+        color: INK,
+        outline: 'none',
+        fontFamily: 'inherit',
+        letterSpacing: '0.01em',
+        transition: 'border-color 0.2s',
+        boxSizing: 'border-box',
+    },
+    inputFocus: {
+        borderBottomColor: INK,
+    },
+    error: {
+        fontSize: 11,
+        color: '#e74c3c',
+        marginTop: 8,
+        marginBottom: 14,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        fontWeight: 600,
+    },
+    success: {
+        fontSize: 12,
+        color: '#22c55e',
+        marginTop: 8,
+        marginBottom: 14,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+        fontWeight: 600,
+    },
+    button: {
+        width: '100%',
+        background: INK,
+        color: BG,
+        border: 'none',
+        padding: '20px 24px',
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: '0.3em',
+        textTransform: 'uppercase',
+        cursor: 'pointer',
+        marginTop: 24,
+        transition: 'opacity 0.15s',
+        fontFamily: 'inherit',
+    },
+    footer: {
+        marginTop: 36,
+        fontSize: 13,
+        color: MUTED,
+        textAlign: 'center',
+    },
+    inlineLink: {
+        color: INK,
+        textDecoration: 'none',
+        borderBottom: `1px solid ${INK}`,
+        paddingBottom: 1,
+        marginLeft: 4,
+        fontWeight: 500,
+    },
+    benefits: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: 16,
+        marginTop: 36,
+        marginBottom: 36,
+        paddingTop: 28,
+        paddingBottom: 0,
+        borderTop: `1px solid ${ACCENT_LINE}`,
+        width: '100%',
+    },
+    benefit: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        fontSize: 12,
+        color: MUTED,
+    },
+    benefitDot: {
+        width: 5,
+        height: 5,
+        background: INK,
+        borderRadius: '50%',
+        marginTop: 6,
+        flexShrink: 0,
+    },
+    bottomBar: {
+        marginTop: 36,
+        paddingTop: 24,
+        borderTop: `1px solid ${ACCENT_LINE}`,
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: 10,
+        letterSpacing: '0.25em',
+        textTransform: 'uppercase',
+        color: MUTED,
+        fontWeight: 600,
+    },
+}
 
 export default function Register() {
-    const [form,    setForm]    = useState({
-        username:'', password:'', full_name:'',
-        email:'', phone:'', address:''
+    const [form, setForm] = useState({
+        username:  '',
+        password:  '',
+        full_name: '',
+        email:     '',
+        phone:     '',
+        address:   '',
     })
     const [error,   setError]   = useState('')
     const [success, setSuccess] = useState('')
     const [loading, setLoading] = useState(false)
+    const [focused, setFocused] = useState(null)
     const navigate = useNavigate()
 
-    const set = k => e => setForm(prev => ({...prev, [k]: e.target.value}))
+    useEffect(() => {
+        const href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap'
+        if (!document.querySelector(`link[href="${href}"]`)) {
+            const link = document.createElement('link')
+            link.rel = 'stylesheet'
+            link.href = href
+            document.head.appendChild(link)
+        }
+    }, [])
+
+    const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        if (!form.username || !form.password || !form.full_name || !form.email) {
-            setError('Please fill in all required fields'); return
-        }
-        setLoading(true); setError(''); setSuccess('')
+        setError('')
+        setSuccess('')
+        setLoading(true)
+
         try {
-            await register(form)
-            setSuccess('Account created! Redirecting...')
+            // ════════════════════════════════════════════════════════════════
+            // ⚠️ REPLACE THIS BLOCK with your existing API call
+            // Your existing Register.jsx probably has something like:
+            //    import { registerCustomer } from '../api'
+            //    const { data } = await registerCustomer(form)
+            // Paste your existing logic here.
+            // ════════════════════════════════════════════════════════════════
+            const response = await fetch('http://localhost:8000/api/register/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
+            })
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}))
+                throw new Error(errData.error || errData.detail || 'Registration failed')
+            }
+
+            setSuccess('Account created. Redirecting to sign in…')
             setTimeout(() => navigate('/login'), 1500)
-        } catch(err) {
-            setError(err.response?.data?.error || 'Registration failed')
+        } catch (err) {
+            setError(err.message || 'Registration failed')
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
+    const fieldStyle = (name) => ({
+        ...s.input,
+        ...(focused === name ? s.inputFocus : {}),
+    })
+
     return (
-        <div style={{ minHeight:'100vh', display:'grid', gridTemplateColumns:'1fr 1fr',
-                      fontFamily:"'DM Sans',sans-serif", background:'#0f0c29',
-                      position:'relative', overflow:'hidden' }}>
-            <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-
-            {/* Background blobs */}
-            <div style={{ position:'absolute', width:500, height:500, borderRadius:'50%',
-                          background:'radial-gradient(circle,rgba(79,70,229,.3) 0%,transparent 70%)',
-                          top:'-10%', left:'-5%', filter:'blur(40px)', pointerEvents:'none' }}/>
-            <div style={{ position:'absolute', width:400, height:400, borderRadius:'50%',
-                          background:'radial-gradient(circle,rgba(124,58,237,.25) 0%,transparent 70%)',
-                          bottom:'-5%', right:'50%', filter:'blur(40px)', pointerEvents:'none' }}/>
-
-            {/* ── Left: Brand panel ── */}
-            <div style={{ display:'flex', flexDirection:'column', justifyContent:'space-between',
-                          padding:'48px 52px', position:'relative', zIndex:1 }}>
-
-                {/* Logo */}
-                <div style={{ display:'inline-flex', alignItems:'center', gap:12,
-                              background:'rgba(255,255,255,.08)',
-                              backdropFilter:'blur(10px)',
-                              border:'1px solid rgba(255,255,255,.12)',
-                              borderRadius:50, padding:'10px 20px', width:'fit-content' }}>
-                    <span style={{ fontSize:22 }}></span>
-                    <div>
-                        <div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>Men's Store</div>
-                        <div style={{ fontSize:10, color:'rgba(255,255,255,.5)',
-                                      letterSpacing:'.1em' }}>CAMBODIA</div>
-                    </div>
+        <div style={s.page}>
+            <div style={s.container}>
+                {/* Brand */}
+                <div style={s.brand}>
+                    <div style={s.monogram}>M</div>
+                    <div style={s.brandText}>Men's · Cambodia</div>
+                    
                 </div>
 
-                {/* Center text */}
-                <div>
-                    <div style={{ fontSize:11, fontWeight:600, color:'#818cf8',
-                                  letterSpacing:'.12em', textTransform:'uppercase',
-                                  marginBottom:16 }}>Join Us Today</div>
-                    <h1 style={{ fontSize:42, fontWeight:800, color:'#fff',
-                                 lineHeight:1.15, marginBottom:20,
-                                 letterSpacing:'-.02em' }}>
-                        Start Your<br/>Shopping<br/>Journey
-                    </h1>
-                    <p style={{ fontSize:14, color:'rgba(255,255,255,.55)',
-                                lineHeight:1.8, maxWidth:320 }}>
-                        Create your free account and get access to our full men's collection.
-                        Fast checkout, order tracking and exclusive deals.
-                    </p>
+                {/* Header */}
+                <div style={s.eyebrow}>Join Us Today</div>
+                <h1 style={s.headline}>Create Account</h1>
+                <p style={s.subhead}>
+                    Start your shopping journey. Get access to our full
+                    collection, faster checkout, and order tracking.
+                </p>
 
-                    {/* Benefits */}
-                    <div style={{ display:'flex', flexDirection:'column', gap:14, marginTop:36 }}>
-                        {[
-                            ['', 'Easy cart & checkout'],
-                            ['', 'Track your orders'],
-                            ['', 'Secure & private'],
-                            ['', 'Multiple payment options'],
-                        ].map(([icon, text]) => (
-                            <div key={text} style={{ display:'flex', alignItems:'center', gap:14 }}>
-                                <div style={{ width:38, height:38,
-                                              background:'rgba(255,255,255,.08)',
-                                              backdropFilter:'blur(8px)',
-                                              border:'1px solid rgba(255,255,255,.1)',
-                                              borderRadius:10, display:'flex',
-                                              alignItems:'center', justifyContent:'center',
-                                              fontSize:16 }}>{icon}</div>
-                                <span style={{ fontSize:14, color:'rgba(255,255,255,.7)',
-                                               fontWeight:500 }}>{text}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Form */}
+                <form style={s.form} onSubmit={handleSubmit} noValidate>
 
-                <div style={{ fontSize:12, color:'rgba(255,255,255,.3)' }}>
-                    Already have an account?{' '}
-                    <Link to="/login" style={{ color:'#a5b4fc', fontWeight:600 }}>
-                        Sign in →
-                    </Link>
-                </div>
-            </div>
-
-            {/* ── Right: Form ── */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'center',
-                          padding:'40px 48px', position:'relative', zIndex:1 }}>
-                <div style={{ width:'100%', maxWidth:420,
-                              background:'rgba(255,255,255,.06)',
-                              backdropFilter:'blur(24px)',
-                              border:'1px solid rgba(255,255,255,.1)',
-                              borderRadius:24, padding:'36px 36px 32px',
-                              boxShadow:'0 32px 64px rgba(0,0,0,.4)' }}>
-
-                    <div style={{ marginBottom:28 }}>
-                        <h2 style={{ fontSize:24, fontWeight:800, color:'#fff',
-                                     marginBottom:6, letterSpacing:'-.02em' }}>
-                            Create account
-                        </h2>
-                        <p style={{ fontSize:13, color:'rgba(255,255,255,.4)' }}>
-                            Fill in your details to get started
-                        </p>
-                    </div>
-
-                    {/* Alerts */}
-                    {error && (
-                        <div style={{ background:'rgba(239,68,68,.15)',
-                                      border:'1px solid rgba(239,68,68,.3)',
-                                      color:'#fca5a5', padding:'11px 14px',
-                                      borderRadius:10, fontSize:13, marginBottom:20 }}>
-                            ✕ {error}
-                        </div>
-                    )}
-                    {success && (
-                        <div style={{ background:'rgba(34,197,94,.15)',
-                                      border:'1px solid rgba(34,197,94,.3)',
-                                      color:'#86efac', padding:'11px 14px',
-                                      borderRadius:10, fontSize:13, marginBottom:20 }}>
-                            ✓ {success}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit}>
-                        {/* Row 1: Username + Password */}
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr',
-                                      gap:12, marginBottom:14 }}>
-                            {[
-                                ['username','Username *','sokdara','text'],
-                                ['password','Password *','••••••••','password'],
-                            ].map(([k,l,p,t]) => (
-                                <div key={k}>
-                                    <label style={{ display:'block', fontSize:11, fontWeight:600,
-                                                    color:'rgba(255,255,255,.5)', marginBottom:7,
-                                                    textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                        {l}
-                                    </label>
-                                    <input type={t} value={form[k]} onChange={set(k)}
-                                        placeholder={p} required
-                                        style={{ width:'100%', padding:'11px 12px',
-                                                 background:'rgba(255,255,255,.07)',
-                                                 border:'1px solid rgba(255,255,255,.1)',
-                                                 borderRadius:10, fontSize:13, color:'#fff',
-                                                 boxSizing:'border-box', outline:'none',
-                                                 fontFamily:'inherit', transition:'all .2s' }}
-                                        onFocus={e => {
-                                            e.target.style.borderColor='rgba(129,140,248,.7)'
-                                            e.target.style.background='rgba(255,255,255,.1)'
-                                        }}
-                                        onBlur={e => {
-                                            e.target.style.borderColor='rgba(255,255,255,.1)'
-                                            e.target.style.background='rgba(255,255,255,.07)'
-                                        }} />
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Full name */}
-                        <div style={{ marginBottom:14 }}>
-                            <label style={{ display:'block', fontSize:11, fontWeight:600,
-                                            color:'rgba(255,255,255,.5)', marginBottom:7,
-                                            textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                Full Name *
+                    {/* Username + Password row */}
+                    <div style={s.fieldRow}>
+                        <div>
+                            <label style={s.label} htmlFor="username">
+                                Username<span style={s.required}>*</span>
                             </label>
-                            <input value={form.full_name} onChange={set('full_name')}
-                                placeholder="Sok Dara" required
-                                style={{ width:'100%', padding:'11px 12px',
-                                         background:'rgba(255,255,255,.07)',
-                                         border:'1px solid rgba(255,255,255,.1)',
-                                         borderRadius:10, fontSize:13, color:'#fff',
-                                         boxSizing:'border-box', outline:'none',
-                                         fontFamily:'inherit', transition:'all .2s' }}
-                                onFocus={e => {
-                                    e.target.style.borderColor='rgba(129,140,248,.7)'
-                                    e.target.style.background='rgba(255,255,255,.1)'
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor='rgba(255,255,255,.1)'
-                                    e.target.style.background='rgba(255,255,255,.07)'
-                                }} />
+                            <input
+                                id="username"
+                                type="text"
+                                style={fieldStyle('username')}
+                                value={form.username}
+                                onChange={(e) => update('username', e.target.value)}
+                                onFocus={() => setFocused('username')}
+                                onBlur={() => setFocused(null)}
+                                required
+                                autoComplete="username"
+                            />
                         </div>
-
-                        {/* Email */}
-                        <div style={{ marginBottom:14 }}>
-                            <label style={{ display:'block', fontSize:11, fontWeight:600,
-                                            color:'rgba(255,255,255,.5)', marginBottom:7,
-                                            textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                Email *
+                        <div>
+                            <label style={s.label} htmlFor="password">
+                                Password<span style={s.required}>*</span>
                             </label>
-                            <input type="email" value={form.email} onChange={set('email')}
-                                placeholder="sokdara@email.com" required
-                                style={{ width:'100%', padding:'11px 12px',
-                                         background:'rgba(255,255,255,.07)',
-                                         border:'1px solid rgba(255,255,255,.1)',
-                                         borderRadius:10, fontSize:13, color:'#fff',
-                                         boxSizing:'border-box', outline:'none',
-                                         fontFamily:'inherit', transition:'all .2s' }}
-                                onFocus={e => {
-                                    e.target.style.borderColor='rgba(129,140,248,.7)'
-                                    e.target.style.background='rgba(255,255,255,.1)'
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor='rgba(255,255,255,.1)'
-                                    e.target.style.background='rgba(255,255,255,.07)'
-                                }} />
+                            <input
+                                id="password"
+                                type="password"
+                                style={fieldStyle('password')}
+                                value={form.password}
+                                onChange={(e) => update('password', e.target.value)}
+                                onFocus={() => setFocused('password')}
+                                onBlur={() => setFocused(null)}
+                                required
+                                autoComplete="new-password"
+                            />
                         </div>
+                    </div>
 
-                        {/* Row 2: Phone + Address */}
-                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr',
-                                      gap:12, marginBottom:24 }}>
-                            {[
-                                ['phone','Phone','012-345-678'],
-                                ['address','Address','Phnom Penh'],
-                            ].map(([k,l,p]) => (
-                                <div key={k}>
-                                    <label style={{ display:'block', fontSize:11, fontWeight:600,
-                                                    color:'rgba(255,255,255,.5)', marginBottom:7,
-                                                    textTransform:'uppercase', letterSpacing:'.06em' }}>
-                                        {l}
-                                    </label>
-                                    <input value={form[k]} onChange={set(k)} placeholder={p}
-                                        style={{ width:'100%', padding:'11px 12px',
-                                                 background:'rgba(255,255,255,.07)',
-                                                 border:'1px solid rgba(255,255,255,.1)',
-                                                 borderRadius:10, fontSize:13, color:'#fff',
-                                                 boxSizing:'border-box', outline:'none',
-                                                 fontFamily:'inherit', transition:'all .2s' }}
-                                        onFocus={e => {
-                                            e.target.style.borderColor='rgba(129,140,248,.7)'
-                                            e.target.style.background='rgba(255,255,255,.1)'
-                                        }}
-                                        onBlur={e => {
-                                            e.target.style.borderColor='rgba(255,255,255,.1)'
-                                            e.target.style.background='rgba(255,255,255,.07)'
-                                        }} />
-                                </div>
-                            ))}
+                    {/* Full Name */}
+                    <div style={s.fieldGroup}>
+                        <label style={s.label} htmlFor="full_name">
+                            Full Name<span style={s.required}>*</span>
+                        </label>
+                        <input
+                            id="full_name"
+                            type="text"
+                            style={fieldStyle('full_name')}
+                            placeholder=""
+                            value={form.full_name}
+                            onChange={(e) => update('full_name', e.target.value)}
+                            onFocus={() => setFocused('full_name')}
+                            onBlur={() => setFocused(null)}
+                            required
+                            autoComplete="name"
+                        />
+                    </div>
+
+                    {/* Email */}
+                    <div style={s.fieldGroup}>
+                        <label style={s.label} htmlFor="email">
+                            Email<span style={s.required}>*</span>
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            style={fieldStyle('email')}
+                            value={form.email}
+                            onChange={(e) => update('email', e.target.value)}
+                            onFocus={() => setFocused('email')}
+                            onBlur={() => setFocused(null)}
+                            required
+                            autoComplete="email"
+                        />
+                    </div>
+
+                    {/* Phone + Address row */}
+                    <div style={s.fieldRow}>
+                        <div>
+                            <label style={s.label} htmlFor="phone">Phone</label>
+                            <input
+                                id="phone"
+                                type="tel"
+                                style={fieldStyle('phone')}
+                                value={form.phone}
+                                onChange={(e) => update('phone', e.target.value)}
+                                onFocus={() => setFocused('phone')}
+                                onBlur={() => setFocused(null)}
+                                autoComplete="tel"
+                            />
                         </div>
+                        <div>
+                            <label style={s.label} htmlFor="address">Address</label>
+                            <input
+                                id="address"
+                                type="text"
+                                style={fieldStyle('address')}
+                                value={form.address}
+                                onChange={(e) => update('address', e.target.value)}
+                                onFocus={() => setFocused('address')}
+                                onBlur={() => setFocused(null)}
+                                autoComplete="street-address"
+                            />
+                        </div>
+                    </div>
 
-                        <button type="submit" disabled={loading}
-                            style={{ width:'100%', padding:'13px',
-                                     background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                                     color:'#fff', border:'none', borderRadius:12,
-                                     fontSize:15, fontWeight:700, cursor:'pointer',
-                                     boxShadow:'0 6px 20px rgba(99,102,241,.45)',
-                                     letterSpacing:'.01em', transition:'all .2s',
-                                     opacity: loading ? .8 : 1 }}
-                            onMouseEnter={e => { if(!loading) e.target.style.transform='translateY(-1px)' }}
-                            onMouseLeave={e => e.target.style.transform='none'}>
-                            {loading ? 'Creating account...' : 'Create Account →'}
-                        </button>
-                    </form>
+                    {error   && <div style={s.error}>{error}</div>}
+                    {success && <div style={s.success}>{success}</div>}
 
-                    <p style={{ textAlign:'center', marginTop:18, fontSize:13,
-                                color:'rgba(255,255,255,.3)' }}>
-                        Already have an account?{' '}
-                        <Link to="/login"
-                            style={{ color:'#a5b4fc', fontWeight:600, textDecoration:'none' }}>
-                            Sign in
-                        </Link>
-                    </p>
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        style={{
+                            ...s.button,
+                            ...(loading ? { opacity: 0.5, cursor: 'wait' } : {}),
+                        }}
+                    >
+                        {loading ? 'Creating account…' : 'Create Account →'}
+                    </button>
+                </form>
+
+                {/* Benefits */}
+                <div style={s.benefits}>
+                    <div style={s.benefit}>
+                        <div style={s.benefitDot} />
+                        <span>Easy cart & checkout</span>
+                    </div>
+                    <div style={s.benefit}>
+                        <div style={s.benefitDot} />
+                        <span>Track your orders</span>
+                    </div>
+                    <div style={s.benefit}>
+                        <div style={s.benefitDot} />
+                        <span>Secure & private</span>
+                    </div>
+                    <div style={s.benefit}>
+                        <div style={s.benefitDot} />
+                        <span>Exclusive member deals</span>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <p style={s.footer}>
+                    Already have an account?
+                    <Link to="/login" style={s.inlineLink}>Sign in</Link>
+                </p>
+
+                {/* Bottom bar */}
+                <div style={s.bottomBar}>
+                    <span>© 2026 Men's Store</span>
+                    <span>Phnom Penh</span>
                 </div>
             </div>
         </div>

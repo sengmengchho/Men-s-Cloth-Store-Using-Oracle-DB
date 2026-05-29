@@ -56,7 +56,7 @@ function RegisterForm({ prefillName, onSuccess, onCancel }) {
                 <button onClick={submit} disabled={loading}
                     style={{ flex:1, padding:'11px', background:'#4f46e5', color:'#fff',
                              border:'none', borderRadius:10, fontSize:13, fontWeight:600, cursor:'pointer' }}>
-                    {loading ? '⏳ Registering...' : '✓ Register & Select'}
+                    {loading ? ' Registering...' : '✓ Register & Select'}
                 </button>
                 <button onClick={onCancel}
                     style={{ padding:'11px 16px', background:'#fff', color:'#64748b',
