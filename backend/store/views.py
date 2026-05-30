@@ -251,15 +251,12 @@ class OrdersView(APIView):
             "SELECT customer_id FROM customers WHERE user_id = :id",
             {'id': payload['user_id']}
         )
-        # FIND this:
-        # REPLACE with:
         row = cursor.fetchone()
         cursor.close(); conn.close()
-
         if not row:
-            return Response({'error': 'No customer profile found'}, status=404)
+            return Response([])
+        return Response(utils.get_customer_orders(row[0]))
 
-        return Response(utils.get_customer_orders(int(row[0])))  # ← add int()
     def post(self, request):
         """All logged-in users can place orders."""
         payload = decode_token(request)
@@ -275,19 +272,17 @@ class OrdersView(APIView):
             return Response({'error': str(e)}, status=400)
 
 
-class OrderStatusView(APIView):
-    permission_classes = [AllowAny]
-
-    def put(self, request, order_id):
-        payload, err = require_roles('Admin', 'Sale')(request)
-        if err: return err
-        new_status = request.data.get('status')
-        try:
-            utils.update_order_status(order_id, new_status)
-            return Response({'message': f'Order updated to {new_status}'})
-        except Exception as e:
-            return Response({'error': str(e)}, status=400)
-
+def put(self, request, order_id):
+    payload, err = require_roles('Admin', 'Sale')(request)
+    if err: return err
+    new_status = request.data.get('status')
+    try:
+        utils.update_order_status(order_id, new_status)
+        utils.log_status_change(order_id, payload['user_id'], new_status)
+        return Response({'message': f'Order updated to {new_status}'})
+    except Exception as e:
+        return Response({'error': str(e)}, status=400)
+    
 
 # ── Users (Admin) ─────────────────────────────────────────────────────────────
 
@@ -469,5 +464,59 @@ class OrderItemsView(APIView):
         try:
             items = utils.get_order_items(int(order_id))
             return Response(items)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+
+# ── Audit Views (Admin only) ──────────────────────────────────────────────────
+
+class AuditView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        payload, err = require_roles('Admin')(request)
+        if err: return err
+        try:
+            orders = utils.get_audit_report()
+            staff  = utils.get_staff_performance()
+            return Response({'orders': orders, 'staff': staff})
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+
+
+
+class CreateUserView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        payload, err = require_roles('Admin')(request)
+        if err: return err
+        d = request.data
+        role = d.get('role', 'Customer')
+        if role not in ('Admin', 'Sale', 'Customer'):
+            return Response({'error': 'Invalid role'}, status=400)
+        try:
+            uid = utils.create_user(
+                d['username'], d['password'], d['full_name'],
+                d.get('email',''), d.get('phone',''), d.get('address',''),
+                role
+            )
+            return Response({'message': f'{role} account created', 'user_id': uid}, status=201)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+        
+
+
+class OrderStatusView(APIView):
+    permission_classes = [AllowAny]
+
+    def put(self, request, order_id):
+        payload, err = require_roles('Admin', 'Sale')(request)
+        if err: return err
+        new_status = request.data.get('status')
+        try:
+            utils.update_order_status(order_id, new_status)
+            utils.log_status_change(order_id, payload['user_id'], new_status)
+            return Response({'message': f'Order updated to {new_status}'})
         except Exception as e:
             return Response({'error': str(e)}, status=400)

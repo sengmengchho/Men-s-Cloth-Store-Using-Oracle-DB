@@ -33,4 +33,6 @@ urlpatterns = [
     # Database Backup (Admin)
     path('backup/',                             views.BackupView.as_view()),
     path('orders/<int:order_id>/items/',        views.OrderItemsView.as_view()),
+    path('users/create/',                          views.CreateUserView.as_view()),
+    path('audit/',                              views.AuditView.as_view()),
 ]

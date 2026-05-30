@@ -17,9 +17,13 @@ SHOW USER;
 -- STEP 1: CREATE TABLES
 -- ============================================================
 
+-- Step 1: Switch container first
+ALTER SESSION SET CONTAINER = XEPDB1;
+
+-- 1. PRODUCTS
 CREATE TABLE products (
     product_id   NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    product_name VARCHAR2(100)  NOT NULL,
+    p_name VARCHAR2(100)  NOT NULL,
     category     VARCHAR2(50),
     size_        VARCHAR2(10),
     color        VARCHAR2(30),
@@ -112,14 +116,24 @@ COMMIT;
 CREATE OR REPLACE VIEW v_sales_report AS
 SELECT
     o.order_id,
-    NVL(c.full_name, 'Unknown') AS customer_name,
-    u.username                  AS sold_by,
-    TO_CHAR(o.order_date, 'YYYY-MM-DD') AS order_date,
+    NVL(c.full_name, 'Unknown')        AS customer_name,
+    (SELECT uname
+     FROM (
+         SELECT u2.username AS uname
+         FROM sales_log sl
+         JOIN users u2 ON sl.user_id = u2.user_id
+         WHERE sl.order_id = o.order_id
+         AND u2.role IN ('Admin','Sale')
+         ORDER BY sl.log_id DESC
+     ) WHERE ROWNUM = 1)               AS sold_by,
+    TO_CHAR(o.order_date,'YYYY-MM-DD') AS order_date,
     o.status,
     o.total_amount
 FROM orders o
-LEFT JOIN customers c ON o.customer_id = c.customer_id
-LEFT JOIN users u     ON o.user_id     = u.user_id;
+LEFT JOIN customers c ON o.customer_id = c.customer_id;
+
+-- Verify
+SELECT * FROM v_sales_report ORDER BY order_id DESC;
 
 CREATE OR REPLACE VIEW v_product_stock AS
 SELECT product_id, product_name, category, size_,
@@ -521,6 +535,252 @@ SELECT COUNT(*) AS customer_count FROM SYSTEM.CUSTOMERS;
 SELECT directory_name, directory_path
 FROM dba_directories
 WHERE directory_name = 'DATA_PUMP_DIR';
+
+
+-- Step 2: Verify column was added
+SELECT column_name FROM user_columns WHERE table_name = 'PRODUCTS';
+
+-- Step 3: Recreate view to include image_url
+CREATE OR REPLACE VIEW v_product_stock AS
+SELECT product_id, product_name, category, size_,
+       color, price, stock_qty, image_url
+FROM products
+ORDER BY stock_qty ASC;
+
+-- Step 4: Check current products
+SELECT product_name, image_url FROM products;
+
+COMMIT;
+
+
+-- Add columns if missing (safe to run - will error if already exists, that's ok)
+ALTER TABLE order_items ADD selected_size  VARCHAR2(10);
+ALTER TABLE order_items ADD selected_color VARCHAR2(30);
+COMMIT;
+
+
+-- Create daily backup job at midnight
+BEGIN
+    DBMS_SCHEDULER.CREATE_JOB(
+        job_name        => 'MENS_STORE_DAILY_BACKUP',
+        job_type        => 'PLSQL_BLOCK',
+        job_action      => '
+            BEGIN
+                -- Log backup time to a table
+                INSERT INTO sales_log (order_id, user_id, action, log_date)
+                VALUES (NULL, NULL, ''AUTO_BACKUP_DAILY'', SYSDATE);
+                COMMIT;
+            END;
+        ',
+        start_date      => SYSTIMESTAMP,
+        repeat_interval => 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0',
+        enabled         => TRUE,
+        comments        => 'Daily auto backup log for Men''s Store'
+    );
+END;
+/
+
+-- Create hourly backup job
+BEGIN
+    DBMS_SCHEDULER.CREATE_JOB(
+        job_name        => 'MENS_STORE_HOURLY_BACKUP',
+        job_type        => 'PLSQL_BLOCK',
+        job_action      => '
+            BEGIN
+                INSERT INTO sales_log (order_id, user_id, action, log_date)
+                VALUES (NULL, NULL, ''AUTO_BACKUP_HOURLY'', SYSDATE);
+                COMMIT;
+            END;
+        ',
+        start_date      => SYSTIMESTAMP,
+        repeat_interval => 'FREQ=HOURLY; BYMINUTE=0',
+        enabled         => TRUE,
+        comments        => 'Hourly auto backup log for Men''s Store'
+    );
+END;
+/
+
+-- Verify jobs created
+SELECT job_name, repeat_interval, enabled, last_start_date
+FROM user_scheduler_jobs;
+
+
+
+-- Update all products stock_qty to match sum of their variants
+UPDATE products p
+SET stock_qty = (
+    SELECT NVL(SUM(v.stock_qty), 0)
+    FROM product_variants v
+    WHERE v.product_id = p.product_id
+);
+
+COMMIT;
+
+-- Verify
+SELECT p.product_name, p.stock_qty, 
+       NVL(SUM(v.stock_qty),0) AS variant_total
+FROM products p
+LEFT JOIN product_variants v ON v.product_id = p.product_id
+GROUP BY p.product_id, p.product_name, p.stock_qty
+ORDER BY p.product_id;
+
+
+
+
+
+
+
+
+
+
+
+
+SELECT table_name FROM user_tables WHERE table_name = 'PRODUCT_VARIANTS';
+
+
+SELECT table_name FROM user_tables ORDER BY table_name;
+
+
+
+
+
+
+-- Check which user owns product_variants
+SELECT owner, table_name 
+FROM all_tables 
+WHERE table_name = 'PRODUCT_VARIANTS';
+
+SELECT SYS_CONTEXT('USERENV', 'SESSION_USER') FROM dual;
+
+
+
+
+SELECT product_id, product_name FROM products ORDER BY product_id;
+
+
+-- Switch to correct container
+ALTER SESSION SET CONTAINER = XEPDB1;
+
+-- Verify you're now in XEPDB1
+SELECT SYS_CONTEXT('USERENV', 'CON_NAME') FROM dual;
+
+
+
+
+
+
+-- Step 2: Check if ORDER_ITEMS exists
+SELECT table_name FROM user_tables WHERE table_name = 'ORDER_ITEMS';
+
+-- Step 3: Check columns (correct view name)
+-- Check ORDER_ITEMS columns
+SELECT column_name, data_type
+FROM user_tab_columns
+WHERE table_name = 'ORDER_ITEMS'
+ORDER BY column_id;
+
+SELECT table_name FROM user_tables ORDER BY table_name;
+
+ALTER SESSION SET CONTAINER = XEPDB1;
+
+SELECT * FROM Customers;
+
+
+
+
+SELECT job_name, repeat_interval, enabled, last_start_date
+FROM user_scheduler_jobs;
+
+
+
+
+
+SELECT o.order_id, o.customer_id, o.user_id, 
+       c.full_name AS customer,
+       u.username  AS placed_by
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+JOIN users u     ON o.user_id     = u.user_id
+ORDER BY o.order_id DESC;
+
+SELECT * FROM v_sales_report ORDER BY order_id DESC;
+
+
+-- 1. Clean up duplicates and spam
+DELETE FROM sales_log 
+WHERE action IN ('AUTO_BACKUP_HOURLY','AUTO_BACKUP_DAILY');
+
+-- 2. Remove duplicate customer status logs (keep only Admin/Sale ones)
+DELETE FROM sales_log sl
+WHERE action LIKE 'STATUS_%'
+AND user_id IN (SELECT user_id FROM users WHERE role = 'Customer');
+
+COMMIT;
+
+-- 3. Fix the trigger to only log Admin/Sale users
+CREATE OR REPLACE TRIGGER trg_order_status_log
+AFTER UPDATE OF status ON orders
+FOR EACH ROW
+DECLARE
+    v_role VARCHAR2(20);
+BEGIN
+    IF :NEW.status != :OLD.status THEN
+        -- Only log if user is Admin or Sale (not Customer)
+        SELECT role INTO v_role 
+        FROM users WHERE user_id = :NEW.user_id;
+        
+        IF v_role IN ('Admin','Sale') THEN
+            INSERT INTO sales_log (order_id, user_id, action, log_date)
+            VALUES (:NEW.order_id, :NEW.user_id,
+                    'STATUS_' || :NEW.status, SYSDATE);
+        END IF;
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+-- 4. Disable the backup scheduler jobs
+BEGIN
+    DBMS_SCHEDULER.DISABLE('MENS_STORE_HOURLY_BACKUP');
+    DBMS_SCHEDULER.DISABLE('MENS_STORE_DAILY_BACKUP');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+COMMIT;
+
+
+-- Hour's user_id is 61, insert the completed log
+INSERT INTO sales_log (order_id, user_id, action, log_date)
+VALUES (34, 61, 'STATUS_COMPLETED', SYSDATE);
+COMMIT;
+
+-- Verify clean log
+SELECT sl.order_id, u.username, u.role, sl.action, sl.log_date
+FROM sales_log sl
+LEFT JOIN users u ON sl.user_id = u.user_id
+ORDER BY sl.log_date DESC;
+
+Select * from users;
+
+
+SELECT sl.log_id, sl.order_id, u.username, u.role, sl.action, sl.log_date
+FROM sales_log sl
+LEFT JOIN users u ON sl.user_id = u.user_id
+WHERE sl.order_id = 34
+ORDER BY sl.log_id;
+
+
+SELECT user_id, username, role FROM users ORDER BY user_id;
+
+
+-- Verify
+SELECT sl.log_id, u.username, u.role, sl.action
+FROM sales_log sl JOIN users u ON sl.user_id = u.user_id
+WHERE sl.order_id = 34;
+
+
+
 
 
 

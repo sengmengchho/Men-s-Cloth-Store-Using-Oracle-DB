@@ -180,12 +180,19 @@ function OrderCard({ order }) {
                                        display:'flex', alignItems:'center', gap:4 }}>
                              {order.ORDER_DATE}
                         </span>
-                        {order.SOLD_BY && (
-                            <span style={{ fontSize:13, color:'#64748b',
-                                           display:'flex', alignItems:'center', gap:4 }}>
-                                 Served by <b style={{ color:'#475569' }}>{order.SOLD_BY}</b>
-                            </span>
-                        )}
+                        <span style={{ fontSize:13, color:'#64748b',
+                                       display:'flex', alignItems:'center', gap:4 }}>
+                            {order.PROCESSED_BY || order.SOLD_BY
+                                ? <>🧑‍💼 Processed by{' '}
+                                    <b style={{ color:'#475569' }}>
+                                        {order.PROCESSED_BY || order.SOLD_BY}
+                                    </b>
+                                  </>
+                                : <span style={{ color:'#94a3b8', fontStyle:'italic' }}>
+                                    ⏳ Awaiting processing
+                                  </span>
+                            }
+                        </span>
                     </div>
                 </div>
 
