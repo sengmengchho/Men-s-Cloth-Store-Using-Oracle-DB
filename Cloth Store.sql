@@ -1,3 +1,15 @@
+-- ============================================================
+--  MEN'S CLOTHING STORE DATABASE  --  Oracle 21c XE
+--  Roles: Admin | Sale | Customer
+--  Author: Th34n
+--  Schema: SYSTEM (PDB: XEPDB1)
+-- ============================================================
+
+-- ============================================================
+-- STEP 0: CONNECT TO PDB & VERIFY
+-- ============================================================
+ALTER SESSION SET CONTAINER = XEPDB1;
+
 SELECT SYS_CONTEXT('USERENV', 'CON_NAME') AS container_name FROM dual;
 SHOW USER;
 
@@ -88,6 +100,10 @@ ALTER TABLE order_items ADD selected_size  VARCHAR2(10);
 ALTER TABLE order_items ADD selected_color VARCHAR2(30);
 
 ALTER TABLE products ADD image_url VARCHAR2(500);
+
+-- Grant access so Django (and other schemas) can see product_variants
+GRANT ALL ON SYSTEM.product_variants TO PUBLIC;
+CREATE OR REPLACE SYNONYM product_variants FOR SYSTEM.product_variants;
 
 COMMIT;
 
@@ -766,5 +782,170 @@ WHERE sl.order_id = 34;
 
 
 
+
+
+
+-- ============================================================
+-- STEP 12: FIX trg_order_status_log (Admin/Sale only, no Customer spam)
+-- ============================================================
+-- The original trigger in Step 4 logs EVERY status change, including by
+-- Customer users. This replacement only logs changes made by Admin or Sale.
+
+CREATE OR REPLACE TRIGGER trg_order_status_log
+AFTER UPDATE OF status ON orders
+FOR EACH ROW
+DECLARE
+    v_role VARCHAR2(20);
+BEGIN
+    IF :NEW.status != :OLD.status THEN
+        SELECT role INTO v_role
+        FROM users WHERE user_id = :NEW.user_id;
+
+        IF v_role IN ('Admin','Sale') THEN
+            INSERT INTO sales_log (order_id, user_id, action, log_date)
+            VALUES (:NEW.order_id, :NEW.user_id,
+                    'STATUS_' || :NEW.status, SYSDATE);
+        END IF;
+    END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+
+-- ============================================================
+-- STEP 13: SYNC PRODUCT STOCK FROM VARIANTS
+-- ============================================================
+-- Run this once after inserting product_variants rows. The trigger
+-- trg_sync_product_stock will keep it in sync afterwards.
+
+UPDATE products p
+SET stock_qty = (
+    SELECT NVL(SUM(v.stock_qty), 0)
+    FROM product_variants v
+    WHERE v.product_id = p.product_id
+)
+WHERE EXISTS (
+    SELECT 1 FROM product_variants v WHERE v.product_id = p.product_id
+);
+
+COMMIT;
+
+-- Verify
+SELECT p.product_name, p.stock_qty,
+       NVL(SUM(v.stock_qty),0) AS variant_total
+FROM products p
+LEFT JOIN product_variants v ON v.product_id = p.product_id
+GROUP BY p.product_id, p.product_name, p.stock_qty
+ORDER BY p.product_id;
+
+
+-- ============================================================
+-- STEP 14: CLEANUP / MAINTENANCE
+-- ============================================================
+
+-- 14.1  Remove backup-log spam from sales_log
+DELETE FROM sales_log
+WHERE action IN ('AUTO_BACKUP_HOURLY','AUTO_BACKUP_DAILY');
+
+-- 14.2  Remove duplicate customer status logs (keep only Admin/Sale)
+DELETE FROM sales_log sl
+WHERE action LIKE 'STATUS_%'
+AND user_id IN (SELECT user_id FROM users WHERE role = 'Customer');
+
+COMMIT;
+
+-- 14.3  Disable old backup scheduler jobs (if they exist from earlier runs)
+BEGIN
+    DBMS_SCHEDULER.DISABLE('MENS_STORE_HOURLY_BACKUP');
+    DBMS_SCHEDULER.DISABLE('MENS_STORE_DAILY_BACKUP');
+EXCEPTION WHEN OTHERS THEN NULL;
+END;
+/
+
+COMMIT;
+
+
+-- ============================================================
+-- STEP 15: OPTIONAL - SCHEDULER JOBS FOR AUTO-BACKUP LOG
+-- ============================================================
+-- These jobs only log a row into sales_log; they do NOT create
+-- a real .dmp backup. Step 17 has the real backup command.
+-- Skip this step unless you specifically want the audit-log entries.
+
+-- BEGIN
+--     DBMS_SCHEDULER.CREATE_JOB(
+--         job_name        => 'MENS_STORE_DAILY_BACKUP',
+--         job_type        => 'PLSQL_BLOCK',
+--         job_action      => '
+--             BEGIN
+--                 INSERT INTO sales_log (order_id, user_id, action, log_date)
+--                 VALUES (NULL, NULL, ''AUTO_BACKUP_DAILY'', SYSDATE);
+--                 COMMIT;
+--             END;
+--         ',
+--         start_date      => SYSTIMESTAMP,
+--         repeat_interval => 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0',
+--         enabled         => TRUE,
+--         comments        => 'Daily auto backup log for Men''s Store'
+--     );
+-- END;
+-- /
+
+-- BEGIN
+--     DBMS_SCHEDULER.CREATE_JOB(
+--         job_name        => 'MENS_STORE_HOURLY_BACKUP',
+--         job_type        => 'PLSQL_BLOCK',
+--         job_action      => '
+--             BEGIN
+--                 INSERT INTO sales_log (order_id, user_id, action, log_date)
+--                 VALUES (NULL, NULL, ''AUTO_BACKUP_HOURLY'', SYSDATE);
+--                 COMMIT;
+--             END;
+--         ',
+--         start_date      => SYSTIMESTAMP,
+--         repeat_interval => 'FREQ=HOURLY; BYMINUTE=0',
+--         enabled         => TRUE,
+--         comments        => 'Hourly auto backup log for Men''s Store'
+--     );
+-- END;
+-- /
+
+-- Verify scheduler jobs
+SELECT job_name, repeat_interval, enabled, last_start_date
+FROM user_scheduler_jobs;
+
+
+-- ============================================================
+-- STEP 16: EXTRA VERIFICATION QUERIES
+-- ============================================================
+
+-- Confirm which container we're connected to
+SELECT SYS_CONTEXT('USERENV', 'CON_NAME') FROM dual;
+
+-- List available service names (useful when configuring Django/cx_Oracle)
+SELECT name FROM v$services;
+
+-- All tables in current schema
+SELECT table_name FROM user_tables ORDER BY table_name;
+
+-- Check product_variants ownership
+SELECT owner, table_name
+FROM all_tables
+WHERE table_name = 'PRODUCT_VARIANTS';
+
+-- View sales_log joined with user info
+SELECT sl.log_id, sl.order_id, u.username, u.role, sl.action, sl.log_date
+FROM sales_log sl
+LEFT JOIN users u ON sl.user_id = u.user_id
+ORDER BY sl.log_date DESC;
+
+-- Orders with customer + who placed them
+SELECT o.order_id, o.customer_id, o.user_id,
+       c.full_name AS customer,
+       u.username  AS placed_by
+FROM orders o
+JOIN customers c ON o.customer_id = c.customer_id
+JOIN users u     ON o.user_id     = u.user_id
+ORDER BY o.order_id DESC;
 
 

@@ -11,11 +11,11 @@ const STATUS_FLOW = {
 }
 
 const STATUS_STYLE = {
-    Pending:   { bg:'#fffbeb', color:'#b45309', border:'#fde68a', dot:'#f59e0b' },
-    Confirmed: { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe', dot:'#3b82f6' },
-    Shipped:   { bg:'#ecfeff', color:'#0891b2', border:'#a5f3fc', dot:'#06b6d4' },
-    Completed: { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0', dot:'#22c55e' },
-    Cancelled: { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca', dot:'#ef4444' },
+    Pending:   { bg:'#fffbeb', color:'#b45309', border:'#fde68a', icon:'' },
+    Confirmed: { bg:'#eff6ff', color:'#1d4ed8', border:'#bfdbfe', icon:'' },
+    Shipped:   { bg:'#f0fdf4', color:'#15803d', border:'#bbf7d0', icon:'' },
+    Completed: { bg:'#f0fdf4', color:'#166534', border:'#86efac', icon:'' },
+    Cancelled: { bg:'#fef2f2', color:'#b91c1c', border:'#fecaca', icon:'' },
 }
 
 const imgSrc = (url) => {
@@ -32,54 +32,50 @@ function OrderItemsModal({ order, onClose }) {
     useEffect(() => {
         getOrderItems(order.ORDER_ID)
             .then(r => setItems(r.data))
+            .catch(e => console.error(e))
             .finally(() => setLoading(false))
     }, [order.ORDER_ID])
 
-    const st = STATUS_STYLE[order.STATUS] || STATUS_STYLE.Pending
-
     return (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      zIndex:1000, padding:16 }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)',
+                      backdropFilter:'blur(4px)', display:'flex', alignItems:'center',
+                      justifyContent:'center', zIndex:1000, padding:16 }}
              onClick={onClose}>
             <div style={{ background:'#fff', borderRadius:20, maxWidth:680, width:'100%',
                           maxHeight:'85vh', overflow:'hidden', display:'flex',
-                          flexDirection:'column', boxShadow:'0 24px 60px rgba(0,0,0,.25)' }}
+                          flexDirection:'column', boxShadow:'0 24px 60px rgba(0,0,0,.3)' }}
                  onClick={e => e.stopPropagation()}>
 
-                <div style={{ padding:'20px 28px', background:'#0f172a',
-                              display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ padding:'20px 24px', borderBottom:'1px solid #f1f5f9',
+                              display:'flex', justifyContent:'space-between', alignItems:'center',
+                              background:'linear-gradient(135deg,#1e1b4b,#4f46e5)' }}>
                     <div>
                         <div style={{ fontSize:16, fontWeight:700, color:'#fff' }}>
-                            Order #{order.ORDER_ID}
+                            Order #{order.ORDER_ID} — Items
                         </div>
-                        <div style={{ fontSize:12, color:'#94a3b8', marginTop:2 }}>
+                        <div style={{ fontSize:12, color:'#c7d2fe', marginTop:2 }}>
                             {order.CUSTOMER_NAME} · {order.ORDER_DATE}
-                            <span style={{ marginLeft:10, background:st.bg, color:st.color,
-                                           padding:'2px 8px', borderRadius:12, fontSize:11,
-                                           fontWeight:600 }}>
-                                {order.STATUS}
-                            </span>
                         </div>
                     </div>
                     <button onClick={onClose}
-                        style={{ width:32, height:32, background:'rgba(255,255,255,.1)',
-                                 border:'none', borderRadius:8, cursor:'pointer',
-                                 fontSize:16, color:'#fff' }}>✕</button>
+                        style={{ width:32, height:32, background:'rgba(255,255,255,.15)',
+                                 border:'none', borderRadius:10, cursor:'pointer',
+                                 fontSize:16, color:'#fff', display:'flex',
+                                 alignItems:'center', justifyContent:'center' }}>✕</button>
                 </div>
 
                 <div style={{ flex:1, overflow:'auto' }}>
                     {loading ? (
-                        <div style={{ padding:40, textAlign:'center', color:'#94a3b8' }}>Loading...</div>
+                        <div style={{ padding:40, textAlign:'center', color:'#94a3b8' }}>Loading items...</div>
                     ) : items.length === 0 ? (
                         <div style={{ padding:40, textAlign:'center', color:'#94a3b8' }}>No items found</div>
                     ) : (
                         <>
-                            <div style={{ display:'grid', gridTemplateColumns:'1fr 80px 80px 60px 90px',
-                                          gap:12, padding:'10px 28px',
-                                          background:'#f8fafc', borderBottom:'1px solid #f1f5f9',
-                                          fontSize:11, fontWeight:600, color:'#64748b',
-                                          textTransform:'uppercase', letterSpacing:'.04em' }}>
+                            <div style={{ padding:'10px 24px', display:'grid',
+                                          gridTemplateColumns:'1fr 70px 70px 60px 90px',
+                                          gap:10, fontSize:11, fontWeight:600, color:'#94a3b8',
+                                          textTransform:'uppercase', letterSpacing:'.04em',
+                                          background:'#f8fafc', borderBottom:'1px solid #f1f5f9' }}>
                                 <span>Product</span>
                                 <span style={{ textAlign:'center' }}>Size</span>
                                 <span style={{ textAlign:'center' }}>Color</span>
@@ -91,12 +87,13 @@ function OrderItemsModal({ order, onClose }) {
                                 const src = imgSrc(item.IMAGE_URL)
                                 return (
                                     <div key={item.ITEM_ID}
-                                        style={{ display:'grid', gridTemplateColumns:'1fr 80px 80px 60px 90px',
-                                                 gap:12, padding:'14px 28px', alignItems:'center',
-                                                 borderBottom: idx<items.length-1?'1px solid #f8fafc':'none',
-                                                 background: idx%2===0?'#fff':'#fafafa' }}>
+                                        style={{ padding:'14px 24px', display:'grid',
+                                                 gridTemplateColumns:'1fr 70px 70px 60px 90px',
+                                                 gap:10, alignItems:'center',
+                                                 borderBottom: idx < items.length-1 ? '1px solid #f8fafc' : 'none',
+                                                 background: idx%2===0 ? '#fff' : '#fafafa' }}>
                                         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                                            <div style={{ width:44, height:44, borderRadius:10,
+                                            <div style={{ width:48, height:48, borderRadius:10,
                                                           background:'#f1f5f9', overflow:'hidden',
                                                           border:'1px solid #e2e8f0', flexShrink:0 }}>
                                                 {src
@@ -104,13 +101,13 @@ function OrderItemsModal({ order, onClose }) {
                                                            style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                                                     : <div style={{ width:'100%', height:'100%', display:'flex',
                                                                     alignItems:'center', justifyContent:'center',
-                                                                    fontSize:18 }}>👔</div>}
+                                                                    fontSize:20 }}></div>}
                                             </div>
                                             <div>
-                                                <div style={{ fontSize:13, fontWeight:600, color:'#0f172a' }}>
+                                                <div style={{ fontSize:14, fontWeight:600, color:'#0f172a' }}>
                                                     {item.PRODUCT_NAME}
                                                 </div>
-                                                <div style={{ fontSize:11, color:'#94a3b8' }}>${item.UNIT_PRICE} each</div>
+                                                <div style={{ fontSize:12, color:'#94a3b8' }}>${item.UNIT_PRICE} each</div>
                                             </div>
                                         </div>
                                         <div style={{ textAlign:'center' }}>
@@ -120,7 +117,7 @@ function OrderItemsModal({ order, onClose }) {
                                                                   fontSize:12, fontWeight:600 }}>
                                                     {item.SELECTED_SIZE}
                                                   </span>
-                                                : <span style={{ color:'#cbd5e1', fontSize:12 }}>—</span>}
+                                                : <span style={{ color:'#cbd5e1' }}>—</span>}
                                         </div>
                                         <div style={{ textAlign:'center' }}>
                                             {item.SELECTED_COLOR && item.SELECTED_COLOR !== '—'
@@ -128,26 +125,32 @@ function OrderItemsModal({ order, onClose }) {
                                                                   padding:'3px 8px', borderRadius:6, fontSize:12 }}>
                                                     {item.SELECTED_COLOR}
                                                   </span>
-                                                : <span style={{ color:'#cbd5e1', fontSize:12 }}>—</span>}
+                                                : <span style={{ color:'#cbd5e1' }}>—</span>}
                                         </div>
-                                        <div style={{ textAlign:'center', fontSize:13, fontWeight:700 }}>
-                                            {item.QUANTITY}
+                                        <div style={{ textAlign:'center' }}>
+                                            <span style={{ background:'#f8fafc', border:'1px solid #e2e8f0',
+                                                           padding:'3px 10px', borderRadius:6,
+                                                           fontSize:13, fontWeight:700 }}>
+                                                ×{item.QUANTITY}
+                                            </span>
                                         </div>
-                                        <div style={{ textAlign:'right', fontSize:14, fontWeight:700, color:'#0f172a' }}>
+                                        <div style={{ textAlign:'right', fontSize:14,
+                                                      fontWeight:700, color:'#4f46e5' }}>
                                             ${Number(item.SUBTOTAL).toFixed(2)}
                                         </div>
                                     </div>
                                 )
                             })}
 
-                            <div style={{ padding:'14px 28px', display:'flex', justifyContent:'space-between',
-                                          alignItems:'center', borderTop:'2px solid #e2e8f0', background:'#fff' }}>
+                            <div style={{ padding:'14px 24px', display:'flex',
+                                          justifyContent:'space-between', alignItems:'center',
+                                          borderTop:'2px solid #e2e8f0', background:'#fff' }}>
                                 <span style={{ fontSize:13, color:'#64748b' }}>
                                     {items.length} product{items.length!==1?'s':''} ·{' '}
-                                    {items.reduce((s,i)=>s+i.QUANTITY,0)} pieces total
+                                    {items.reduce((s,i)=>s+i.QUANTITY,0)} pieces
                                 </span>
-                                <span style={{ fontSize:17, fontWeight:800, color:'#0f172a' }}>
-                                    ${order.TOTAL_AMOUNT}
+                                <span style={{ fontSize:18, fontWeight:800, color:'#0f172a' }}>
+                                    Total: ${order.TOTAL_AMOUNT}
                                 </span>
                             </div>
                         </>
@@ -162,12 +165,45 @@ function OrderItemsModal({ order, onClose }) {
 function StatusBadge({ status }) {
     const st = STATUS_STYLE[status] || STATUS_STYLE.Pending
     return (
-        <span style={{ display:'inline-flex', alignItems:'center', gap:6,
-                        fontSize:12, padding:'4px 12px', borderRadius:6, fontWeight:600,
+        <span style={{ display:'inline-flex', alignItems:'center', gap:5,
+                        fontSize:12, padding:'4px 10px', borderRadius:20, fontWeight:600,
                         background:st.bg, color:st.color, border:`1px solid ${st.border}` }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:st.dot, flexShrink:0 }}/>
-            {status}
+            {st.icon} {status}
         </span>
+    )
+}
+
+// ── Status Action Buttons ─────────────────────────────────────
+function StatusActions({ order, onUpdate }) {
+    const nextStatuses = STATUS_FLOW[order.STATUS] || []
+    if (nextStatuses.length === 0) {
+        return (
+            <span style={{ fontSize:12, color:'#94a3b8', fontStyle:'italic' }}>
+                {order.STATUS === 'Completed' ? 'Order complete' : 'Order cancelled'}
+            </span>
+        )
+    }
+    return (
+        <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            {nextStatuses.map(next => {
+                const isCancel   = next === 'Cancelled'
+                const isComplete = next === 'Completed'
+                return (
+                    <button key={next} onClick={() => onUpdate(order.ORDER_ID, next)}
+                        style={{ padding:'5px 12px', borderRadius:8, fontSize:12,
+                                 fontWeight:600, cursor:'pointer', border:'1.5px solid',
+                                 transition:'all .15s',
+                                 background: isCancel ? '#fff' : isComplete ? '#16a34a' : '#4f46e5',
+                                 color:      isCancel ? '#dc2626' : '#fff',
+                                 borderColor: isCancel ? '#fca5a5' : isComplete ? '#16a34a' : '#4f46e5' }}>
+                        {next === 'Confirmed' ? 'Confirm'
+                         : next === 'Shipped'  ? 'Ship'
+                         : next === 'Completed'? 'Complete'
+                         : 'Cancel'}
+                    </button>
+                )
+            })}
+        </div>
     )
 }
 
@@ -188,205 +224,199 @@ export default function SaleDashboard() {
 
     const handleUpdate = async (orderId, newStatus) => {
         setUpdating(orderId)
-        try { await updateOrderStatus(orderId, newStatus); load() }
-        catch(e) { alert('Update failed: ' + (e.response?.data?.error||e.message)) }
+        try {
+            await updateOrderStatus(orderId, newStatus)
+            load()
+        } catch(e) { alert('Update failed: ' + (e.response?.data?.error || e.message)) }
         setUpdating(null)
     }
 
-    // Revenue = Completed + Pending + Confirmed + Shipped (everything except Cancelled)
+    const total     = orders.length
+    const pending   = orders.filter(o => o.STATUS === 'Pending').length
+    const confirmed = orders.filter(o => o.STATUS === 'Confirmed').length
+    const shipped   = orders.filter(o => o.STATUS === 'Shipped').length
+    const completed = orders.filter(o => o.STATUS === 'Completed').length
     const revenue   = orders.filter(o => o.STATUS !== 'Cancelled')
                             .reduce((s,o) => s + (o.TOTAL_AMOUNT||0), 0)
-    const total     = orders.length
-    const pending   = orders.filter(o => o.STATUS==='Pending').length
-    const confirmed = orders.filter(o => o.STATUS==='Confirmed').length
-    const shipped   = orders.filter(o => o.STATUS==='Shipped').length
-    const completed = orders.filter(o => o.STATUS==='Completed').length
-    const cancelled = orders.filter(o => o.STATUS==='Cancelled').length
 
-    const filterTabs = [
-        { key:'All',       label:'All',       count:total },
-        { key:'Pending',   label:'Pending',   count:pending },
-        { key:'Confirmed', label:'Confirmed', count:confirmed },
-        { key:'Shipped',   label:'Shipped',   count:shipped },
-        { key:'Completed', label:'Completed', count:completed },
-        { key:'Cancelled', label:'Cancelled', count:cancelled },
-    ]
-    const filtered = filter==='All' ? orders : orders.filter(o => o.STATUS===filter)
+    const filterTabs = ['All','Pending','Confirmed','Shipped','Completed','Cancelled']
+    const filtered   = filter === 'All' ? orders : orders.filter(o => o.STATUS === filter)
 
     return (
         <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
-            <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+            <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 
-            {/* Header */}
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:28 }}>
+            <div style={{ display:'flex', justifyContent:'space-between',
+                          alignItems:'flex-start', marginBottom:24 }}>
                 <div>
-                    <h1 style={{ fontSize:24, fontWeight:700, color:'#0f172a', marginBottom:2 }}>Sales Dashboard</h1>
-                    <p style={{ fontSize:13, color:'#94a3b8' }}>Manage and track all customer orders</p>
+                    <h1 style={{ fontSize:26, fontWeight:700, color:'#0f172a', marginBottom:4 }}>
+                        Sales Dashboard
+                    </h1>
+                    <p style={{ fontSize:14, color:'#64748b' }}>Manage and track all orders</p>
                 </div>
                 <button onClick={() => navigate('/sale/new-order')}
-                    style={{ padding:'10px 22px', background:'#0f172a', color:'#fff',
-                             border:'none', borderRadius:10, fontWeight:600,
-                             cursor:'pointer', fontSize:14 }}>
+                    style={{ padding:'10px 20px',
+                             background:'linear-gradient(135deg,#4f46e5,#7c3aed)',
+                             color:'#fff', border:'none', borderRadius:10, fontWeight:600,
+                             cursor:'pointer', fontSize:14,
+                             boxShadow:'0 4px 12px rgba(79,70,229,.3)' }}>
                     + New Order
                 </button>
             </div>
 
-            {/* KPI Cards */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:12, marginBottom:28 }}>
+            {/* Stats */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10, marginBottom:24 }}>
                 {[
-                    { label:'Total Orders',  value:total,     sub:'all time' },
-                    { label:'Pending',       value:pending,   sub:'awaiting' },
-                    { label:'Confirmed',     value:confirmed, sub:'processing' },
-                    { label:'Shipped',       value:shipped,   sub:'in transit' },
-                    { label:'Completed',     value:completed, sub:'delivered' },
-                    { label:'Total Revenue', value:`$${revenue.toFixed(0)}`, sub:'excl. cancelled', big:true },
-                ].map((s,i) => (
-                    <div key={s.label}
-                        style={{ background:'#fff', border:'1px solid #f1f5f9', borderRadius:12,
-                                 padding:'16px 18px',
-                                 borderLeft: i===5 ? '3px solid #0f172a' : '3px solid #f1f5f9' }}>
-                        <div style={{ fontSize: s.big?20:24, fontWeight:800, color:'#0f172a',
-                                      marginBottom:2 }}>{s.value}</div>
-                        <div style={{ fontSize:12, fontWeight:600, color:'#0f172a', marginBottom:2 }}>
-                            {s.label}
+                    { label:'Total',     value:total,     color:'#4f46e5', bg:'#f5f3ff' },
+                    { label:'Pending',   value:pending,   color:'#b45309', bg:'#fffbeb' },
+                    { label:'Confirmed', value:confirmed, color:'#1d4ed8', bg:'#eff6ff' },
+                    { label:'Shipped',   value:shipped,   color:'#0891b2', bg:'#ecfeff' },
+                    { label:'Completed', value:completed, color:'#15803d', bg:'#f0fdf4' },
+                    { label:'Revenue',   value:`$${revenue.toFixed(0)}`, color:'#4f46e5', bg:'#f5f3ff' },
+                ].map(s => (
+                    <div key={s.label} style={{ background:s.bg, borderRadius:12, padding:'14px 16px',
+                                                border:`1px solid ${s.color}22` }}>
+                        <div style={{ fontSize:20, fontWeight:700, color:s.color, marginBottom:2 }}>
+                            {s.value}
                         </div>
-                        <div style={{ fontSize:11, color:'#94a3b8' }}>{s.sub}</div>
+                        <div style={{ fontSize:11, color:'#64748b', fontWeight:500 }}>{s.label}</div>
                     </div>
                 ))}
             </div>
 
-            {/* Filter tabs */}
-            <div style={{ display:'flex', gap:2, marginBottom:20, background:'#f8fafc',
-                          borderRadius:10, padding:4, width:'fit-content' }}>
-                {filterTabs.map(tab => (
-                    <button key={tab.key} onClick={() => setFilter(tab.key)}
-                        style={{ padding:'7px 16px', borderRadius:8, fontSize:13,
-                                 fontWeight: filter===tab.key ? 600 : 400,
-                                 cursor:'pointer', border:'none', fontFamily:'inherit',
-                                 background: filter===tab.key ? '#fff' : 'transparent',
-                                 color: filter===tab.key ? '#0f172a' : '#64748b',
-                                 boxShadow: filter===tab.key ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
-                                 display:'flex', alignItems:'center', gap:6 }}>
-                        {tab.label}
-                        {tab.count > 0 && (
-                            <span style={{ fontSize:11, background: filter===tab.key?'#f1f5f9':'transparent',
-                                           color:'#64748b', borderRadius:20,
-                                           padding:'0px 6px', fontWeight:500 }}>
-                                {tab.count}
+            {/* Flow guide */}
+            <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:12,
+                          padding:'12px 20px', marginBottom:20,
+                          display:'flex', alignItems:'center', gap:6, overflow:'auto' }}>
+                <span style={{ fontSize:11, color:'#94a3b8', fontWeight:600,
+                                textTransform:'uppercase', letterSpacing:'.04em',
+                                marginRight:8, whiteSpace:'nowrap' }}>Order Flow:</span>
+                {['Pending','Confirmed','Shipped','Completed'].map((s,i) => {
+                    const st = STATUS_STYLE[s]
+                    return (
+                        <div key={s} style={{ display:'flex', alignItems:'center' }}>
+                            <span style={{ fontSize:12, fontWeight:600, color:st.color,
+                                           padding:'4px 12px', background:st.bg,
+                                           borderRadius:20, border:`1px solid ${st.border}`,
+                                           whiteSpace:'nowrap' }}>
+                                {st.icon} {s}
                             </span>
-                        )}
-                    </button>
-                ))}
+                            {i < 3 && <span style={{ fontSize:16, color:'#cbd5e1', margin:'0 4px' }}>→</span>}
+                        </div>
+                    )
+                })}
+                <span style={{ fontSize:16, color:'#cbd5e1', margin:'0 6px' }}>|</span>
+                <span style={{ fontSize:12, fontWeight:600, color:'#b91c1c', padding:'4px 12px',
+                               background:'#fef2f2', borderRadius:20, border:'1px solid #fecaca',
+                               whiteSpace:'nowrap' }}> Cancelled (any stage)</span>
+            </div>
+
+            {/* Filter tabs */}
+            <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap' }}>
+                {filterTabs.map(tab => {
+                    const count = tab==='All' ? total : orders.filter(o=>o.STATUS===tab).length
+                    return (
+                        <button key={tab} onClick={() => setFilter(tab)}
+                            style={{ padding:'7px 14px', borderRadius:8, fontSize:13,
+                                     fontWeight:500, cursor:'pointer', border:'1.5px solid',
+                                     fontFamily:'inherit', transition:'all .15s',
+                                     borderColor: filter===tab ? '#4f46e5' : '#e2e8f0',
+                                     background:  filter===tab ? '#4f46e5' : '#fff',
+                                     color:       filter===tab ? '#fff'    : '#64748b',
+                                     display:'flex', alignItems:'center', gap:6 }}>
+                            {tab}
+                            {count > 0 && (
+                                <span style={{ background: filter===tab ? 'rgba(255,255,255,.25)' : '#f1f5f9',
+                                               color: filter===tab ? '#fff' : '#475569',
+                                               borderRadius:12, padding:'1px 7px',
+                                               fontSize:11, fontWeight:600 }}>
+                                    {count}
+                                </span>
+                            )}
+                        </button>
+                    )
+                })}
             </div>
 
             {/* Orders table */}
             {loading ? (
-                <div style={{ textAlign:'center', padding:60, color:'#94a3b8', background:'#fff',
-                              borderRadius:12, border:'1px solid #f1f5f9' }}>Loading orders...</div>
+                <div style={{ textAlign:'center', padding:40, color:'#94a3b8' }}>Loading orders...</div>
             ) : filtered.length === 0 ? (
                 <div style={{ textAlign:'center', padding:60, color:'#94a3b8', background:'#fff',
-                              borderRadius:12, border:'1px solid #f1f5f9' }}>
-                    <div style={{ fontSize:32, marginBottom:10 }}>📭</div>
-                    No {filter} orders
+                              borderRadius:14, border:'1px solid #e2e8f0' }}>
+                    <div style={{ fontSize:40, marginBottom:12 }}></div>
+                    <div style={{ fontSize:15, fontWeight:500 }}>No {filter} orders</div>
                 </div>
             ) : (
-                <div style={{ background:'#fff', border:'1px solid #f1f5f9',
-                              borderRadius:12, overflow:'hidden' }}>
-                    {/* Table header */}
-                    <div style={{ display:'grid', gridTemplateColumns:'80px 1fr 120px 100px 140px 1fr',
-                                  gap:0, padding:'11px 24px', background:'#f8fafc',
-                                  borderBottom:'1px solid #f1f5f9' }}>
-                        {['Order','Customer','Date','Amount','Status','Actions'].map(h => (
-                            <div key={h} style={{ fontSize:11, fontWeight:600, color:'#64748b',
-                                                  textTransform:'uppercase', letterSpacing:'.05em' }}>
-                                {h}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Table rows */}
-                    {filtered.map((o, idx) => {
-                        const isFinal = STATUS_FLOW[o.STATUS]?.length === 0
-                        const nextStatuses = STATUS_FLOW[o.STATUS] || []
-
-                        return (
-                            <div key={o.ORDER_ID}
-                                style={{ display:'grid', gridTemplateColumns:'80px 1fr 120px 100px 140px 1fr',
-                                         gap:0, padding:'14px 24px', alignItems:'center',
-                                         borderBottom: idx<filtered.length-1?'1px solid #f8fafc':'none',
-                                         background: updating===o.ORDER_ID?'#fafafa':'#fff',
-                                         opacity: updating===o.ORDER_ID?.7:1 }}>
-
-                                {/* Order ID */}
-                                <div style={{ fontSize:14, fontWeight:700, color:'#4f46e5' }}>
-                                    #{o.ORDER_ID}
-                                </div>
-
-                                {/* Customer */}
-                                <div>
-                                    <div style={{ fontSize:14, fontWeight:500, color:'#0f172a' }}>
-                                        {o.CUSTOMER_NAME}
-                                    </div>
-                                    <div style={{ fontSize:11, color:'#94a3b8' }}>
-                                        {o.SOLD_BY ? `Processed by ${o.SOLD_BY}` : '—'}
-                                    </div>
-                                </div>
-
-                                {/* Date */}
-                                <div style={{ fontSize:13, color:'#64748b' }}>{o.ORDER_DATE}</div>
-
-                                {/* Amount */}
-                                <div style={{ fontSize:14, fontWeight:700,
-                                              color: o.STATUS==='Cancelled'?'#94a3b8':'#0f172a',
-                                              textDecoration: o.STATUS==='Cancelled'?'line-through':'none' }}>
-                                    ${o.TOTAL_AMOUNT ?? '—'}
-                                </div>
-
-                                {/* Status */}
-                                <div><StatusBadge status={o.STATUS} /></div>
-
-                                {/* Actions */}
-                                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-                                    {/* View items */}
-                                    <button onClick={() => setViewOrder(o)}
-                                        style={{ padding:'5px 12px', background:'#f8fafc',
-                                                 color:'#475569', border:'1px solid #e2e8f0',
-                                                 borderRadius:7, cursor:'pointer',
-                                                 fontSize:12, fontWeight:500 }}>
-                                        View Items
-                                    </button>
-
-                                    {/* Status actions */}
-                                    {updating === o.ORDER_ID ? (
-                                        <span style={{ fontSize:12, color:'#94a3b8' }}>Updating...</span>
-                                    ) : isFinal ? (
-                                        <span style={{ fontSize:12, color:'#94a3b8', fontStyle:'italic' }}>
-                                            {o.STATUS === 'Completed' ? 'Completed' : 'Cancelled'}
-                                        </span>
-                                    ) : (
-                                        nextStatuses.map(next => {
-                                            const isCancel = next === 'Cancelled'
-                                            return (
-                                                <button key={next}
-                                                    onClick={() => handleUpdate(o.ORDER_ID, next)}
-                                                    style={{ padding:'5px 12px', borderRadius:7,
-                                                             fontSize:12, fontWeight:600, cursor:'pointer',
-                                                             border:'1px solid',
-                                                             background: isCancel?'#fff':'#0f172a',
-                                                             color:      isCancel?'#dc2626':'#fff',
-                                                             borderColor: isCancel?'#fca5a5':'#0f172a' }}>
-                                                    {next==='Confirmed'?'Confirm'
-                                                     :next==='Shipped'  ?'Ship'
-                                                     :next==='Completed'?'Complete'
-                                                     :'Cancel'}
-                                                </button>
-                                            )
-                                        })
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    })}
+                <div style={{ background:'#fff', border:'1px solid #e2e8f0',
+                              borderRadius:14, overflow:'hidden' }}>
+                    <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                        <thead>
+                            <tr style={{ background:'#f8fafc' }}>
+                                {['Order','Customer','Date','Amount','Status','Actions'].map(h => (
+                                    <th key={h} style={{ textAlign:'left', padding:'12px 16px',
+                                        fontSize:11, fontWeight:600, color:'#94a3b8',
+                                        textTransform:'uppercase', letterSpacing:'.04em' }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filtered.map(o => {
+                                const isFinal = STATUS_FLOW[o.STATUS]?.length === 0
+                                return (
+                                    <tr key={o.ORDER_ID}
+                                        style={{ borderTop:'1px solid #f1f5f9',
+                                                 opacity: updating===o.ORDER_ID ? .6 : 1,
+                                                 background: isFinal ? '#fafafa' : '#fff' }}>
+                                        <td style={{ padding:'14px 16px' }}>
+                                            <span style={{ fontSize:14, fontWeight:700,
+                                                           color:'#4f46e5' }}>#{o.ORDER_ID}</span>
+                                        </td>
+                                        <td style={{ padding:'14px 16px' }}>
+                                            <div style={{ fontSize:14, fontWeight:500, color:'#0f172a' }}>
+                                                {o.CUSTOMER_NAME}
+                                            </div>
+                                            {o.SOLD_BY && (
+                                                <div style={{ fontSize:11, color:'#94a3b8' }}>
+                                                    via {o.SOLD_BY}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td style={{ padding:'14px 16px', fontSize:13, color:'#64748b' }}>
+                                            {o.ORDER_DATE}
+                                        </td>
+                                        <td style={{ padding:'14px 16px' }}>
+                                            <span style={{ fontSize:15, fontWeight:700,
+                                                           color: o.STATUS==='Cancelled' ? '#94a3b8' : '#0f172a',
+                                                           textDecoration: o.STATUS==='Cancelled' ? 'line-through' : 'none' }}>
+                                                ${o.TOTAL_AMOUNT ?? '—'}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding:'14px 16px' }}>
+                                            <StatusBadge status={o.STATUS} />
+                                        </td>
+                                        <td style={{ padding:'14px 16px' }}>
+                                            {updating === o.ORDER_ID ? (
+                                                <span style={{ fontSize:12, color:'#94a3b8' }}>Updating...</span>
+                                            ) : (
+                                                <div style={{ display:'flex', gap:8, alignItems:'center',
+                                                              flexWrap:'wrap' }}>
+                                                    <button onClick={() => setViewOrder(o)}
+                                                        style={{ padding:'5px 12px', background:'#eff6ff',
+                                                                 color:'#2563eb', border:'1px solid #bfdbfe',
+                                                                 borderRadius:8, cursor:'pointer',
+                                                                 fontSize:12, fontWeight:500 }}>
+                                                        👁 Items
+                                                    </button>
+                                                    <StatusActions order={o} onUpdate={handleUpdate} />
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
                 </div>
             )}
 
