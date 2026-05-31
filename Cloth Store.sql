@@ -1113,4 +1113,3 @@ JOIN customers c ON o.customer_id = c.customer_id
 JOIN users u     ON o.user_id     = u.user_id
 ORDER BY o.order_id DESC;
 
-
